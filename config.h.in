@@ -1,0 +1,13 @@
+#ifndef APP_CONFIG_H
+#define APP_CONFIG_H
+
+// the configured options and settings for dotcpp
+#define APP_NAME "diskpry"
+#define APP_VERSION "@diskpry_VERSION_MAJOR@.@diskpry_VERSION_MINOR@.@diskpry_VERSION_PATCH@"
+#define APP_VERSION_MAJOR "@diskpry_VERSION_MAJOR@"
+#define APP_VERSION_MINOR "@diskpry_VERSION_MINOR@"
+#define APP_VERSION_PATCH "@diskpry_VERSION_PATCH@"
+
+#endif // APP_CONFIG_H
+
+
