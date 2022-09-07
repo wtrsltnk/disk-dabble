@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 
 #include <GLFW/glfw3.h>
+#include <IconsMaterialDesign.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <iostream>
@@ -123,9 +124,24 @@ bool App::Init()
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+
+    io.Fonts->AddFontFromFileTTF("fonts/Poppins-Regular.ttf", 18.0f);
+
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.GlyphOffset = ImVec2(0, 4.0f);
+    config.GlyphMinAdvanceX = 18.0f; // Use if you want to make the icon monospaced
+    static const ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
+    io.Fonts->AddFontFromFileTTF("fonts/MaterialIcons-Regular.ttf", 18.0f, &config, icon_ranges);
+
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //    ImGui::StyleColorsDark();
+    //    ImGui::StyleColorsClassic();
+    ImGui::StyleColorsLight();
+
+    ImGui::GetStyle().ItemSpacing = ImVec2(10.0f, 10.0f);
+    ImGui::GetStyle().FramePadding = ImVec2(10.0f, 6.0f);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -170,13 +186,12 @@ int App::Run()
 
     glfwSetWindowSizeCallback(windowHandle->window, window_resize);
 
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+
     while (glfwWindowShouldClose(windowHandle->window) == 0 && running)
     {
-#if ONLY_RENDER_ON_MESSAGE
         glfwWaitEvents();
-#else
-        glfwPollEvents();
-#endif
         glfwMakeContextCurrent(windowHandle->window);
 
         // Start the Dear ImGui frame
@@ -184,11 +199,24 @@ int App::Run()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::DockSpaceOverViewport();
+
         OnFrame();
 
         ImGui::Render();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows
+        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow *backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
 
         glfwSwapBuffers(windowHandle->window);
     }

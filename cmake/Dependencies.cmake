@@ -2,7 +2,7 @@
 CPMAddPackage(
     NAME glfw
     GITHUB_REPOSITORY "glfw/glfw"
-    GIT_TAG 3.3.4
+    GIT_TAG 3.3.8
     GIT_SHALLOW ON
     OPTIONS
         "GLFW_BUILD_EXAMPLES Off"
@@ -13,7 +13,7 @@ CPMAddPackage(
 
 CPMAddPackage(
     NAME imgui
-    GIT_TAG v1.82
+    GIT_TAG docking
     GITHUB_REPOSITORY ocornut/imgui
     DOWNLOAD_ONLY True
 )

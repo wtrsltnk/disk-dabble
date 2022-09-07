@@ -1,6 +1,9 @@
 #ifndef APP_H
 #define APP_H
 
+#include <memory>
+#include <openfolderwidget.h>
+#include <openimagewidget.h>
 #include <string>
 #include <vector>
 
@@ -33,6 +36,12 @@ protected:
 
 private:
     void *_windowHandle;
+
+    std::vector<std::unique_ptr<OpenFolderWidget>> _openFolders;
+    std::vector<std::unique_ptr<OpenImageWidget>> _openImages;
+
+    void ActivatePath(
+        const std::filesystem::path &path);
 };
 
 #endif // APP_H
