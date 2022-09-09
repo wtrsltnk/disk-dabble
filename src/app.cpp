@@ -11,7 +11,7 @@ void App::OnInit()
 {
     ActivatePath(std::filesystem::current_path());
 
-    glClearColor(0.56f, 0.7f, 0.67f, 1.0f);
+    glClearColor(0.56f, 0.6f, 0.58f, 1.0f);
 }
 
 void App::ActivatePath(
@@ -60,9 +60,17 @@ void App::MainMenu()
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("New", "CTRL+N"))
+            if (ImGui::MenuItem("Open current working directory", "CTRL+N"))
             {
                 ActivatePath(std::filesystem::current_path());
+            }
+            if (ImGui::MenuItem("Open user home directory"))
+            {
+                ActivatePath(std::filesystem::path(getenv("USERPROFILE")));
+            }
+            if (ImGui::MenuItem("Open temp directory"))
+            {
+                ActivatePath(std::filesystem::path(getenv("TEMP")));
             }
             ImGui::EndMenu();
         }

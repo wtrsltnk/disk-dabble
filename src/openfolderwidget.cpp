@@ -203,6 +203,10 @@ void OpenFolderWidget::OnRender()
         }
     }
 
+    ImGui::SameLine(0.0f, 5.0f);
+
+    ImGui::Text(" | ");
+
     for (auto &section : _pathInSections)
     {
         ImGui::SameLine(0.0f, 5.0f);
