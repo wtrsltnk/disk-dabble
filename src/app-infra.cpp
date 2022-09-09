@@ -7,6 +7,7 @@
 #include <IconsMaterialDesign.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <functional>
 #include <iostream>
 #include <memory>
 
@@ -33,7 +34,8 @@ T *App::GetWindowHandle() const
 }
 
 template <class T>
-void App::SetWindowHandle(T *handle)
+void App::SetWindowHandle(
+    T *handle)
 {
     _windowHandle = (void *)handle;
 }
@@ -135,6 +137,8 @@ bool App::Init()
     static const ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
     io.Fonts->AddFontFromFileTTF("fonts/MaterialIcons-Regular.ttf", 18.0f, &config, icon_ranges);
 
+    _monoSpaceFont = io.Fonts->AddFontFromFileTTF("fonts/SourceCodePro-Regular.ttf", 18.0f);
+
     // Setup Dear ImGui style
     //    ImGui::StyleColorsDark();
     //    ImGui::StyleColorsClassic();
@@ -142,6 +146,7 @@ bool App::Init()
 
     ImGui::GetStyle().ItemSpacing = ImVec2(10.0f, 10.0f);
     ImGui::GetStyle().FramePadding = ImVec2(10.0f, 6.0f);
+    ImGui::GetStyle().ItemInnerSpacing = ImVec2(10.0f, 6.0f);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -173,10 +178,55 @@ bool App::Init()
     return true;
 }
 
-void window_resize(GLFWwindow *window, int width, int height)
+void window_resize(
+    GLFWwindow *window,
+    int width,
+    int height)
 {
     reinterpret_cast<App *>(glfwGetWindowUserPointer(window))->OnResize(width, height);
 }
+
+#include <imgui_internal.h>
+
+namespace ImGui
+{
+    ImGuiID DockSpaceOverViewport2(
+        const ImGuiViewport *viewport,
+        ImGuiDockNodeFlags dockspace_flags,
+        const ImGuiWindowClass *window_class,
+        std::function<void()> menu)
+    {
+        if (viewport == NULL)
+            viewport = GetMainViewport();
+
+        SetNextWindowPos(viewport->WorkPos);
+        SetNextWindowSize(viewport->WorkSize);
+        SetNextWindowViewport(viewport->ID);
+
+        ImGuiWindowFlags host_window_flags = 0;
+        host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+        host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+        if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+            host_window_flags |= ImGuiWindowFlags_NoBackground;
+
+        char label[32];
+        ImFormatString(label, IM_ARRAYSIZE(label), "DockSpaceViewport_%08X", viewport->ID);
+
+        PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        Begin(label, NULL, host_window_flags);
+        PopStyleVar(3);
+
+        menu();
+
+        ImGuiID dockspace_id = GetID("DockSpace");
+        DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags, window_class);
+        End();
+
+        return dockspace_id;
+    }
+} // namespace ImGui
 
 int App::Run()
 {
@@ -199,7 +249,13 @@ int App::Run()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::DockSpaceOverViewport();
+        _dockId = ImGui::DockSpaceOverViewport2(
+            nullptr,
+            ImGuiDockNodeFlags_PassthruCentralNode,
+            nullptr,
+            [&]() {
+                MainMenu();
+            });
 
         OnFrame();
 

@@ -1,9 +1,9 @@
 #ifndef APP_H
 #define APP_H
 
+#include <imgui.h>
 #include <memory>
-#include <openfolderwidget.h>
-#include <openimagewidget.h>
+#include <opendocument.h>
 #include <string>
 #include <vector>
 
@@ -34,14 +34,21 @@ protected:
 
     void ClearWindowHandle();
 
+    void MainMenu();
+
 private:
     void *_windowHandle;
+    unsigned int _dockId;
+    ImFont *_monoSpaceFont = nullptr;
 
-    std::vector<std::unique_ptr<OpenFolderWidget>> _openFolders;
-    std::vector<std::unique_ptr<OpenImageWidget>> _openImages;
+    std::vector<std::unique_ptr<OpenDocument>> _openDocuments;
+
+    std::vector<std::unique_ptr<OpenDocument>> _queuedDocuments;
 
     void ActivatePath(
         const std::filesystem::path &path);
+
+    void AddQueuedItems();
 };
 
 #endif // APP_H

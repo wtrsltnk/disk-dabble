@@ -1,23 +1,34 @@
 #ifndef OPENIMAGEWIDGET_H
 #define OPENIMAGEWIDGET_H
 
+#include "opendocument.h"
 #include <filesystem>
+#include <imgui.h>
 
-class OpenImageWidget
+class OpenImageWidget : public OpenDocument
 {
 public:
-    OpenImageWidget(
+    OpenImageWidget();
+
+    void OpenPreviousImageInParentDirectory();
+
+    void OpenNextImageInParentDirectory();
+
+    static bool IsImage(
         const std::filesystem::path &path);
 
-    void Render();
+protected:
+    virtual void OnRender();
 
-    const char *Id() const { return _openImagePath.string().c_str(); }
+    virtual void OnPathChanged(
+        const std::filesystem::path &oldPath);
 
 private:
-    std::filesystem::path _openImagePath;
-
-    void SetPath(
-        const std::filesystem::path &path);
+    unsigned int _textureId = 0;
+    ImVec2 _textureSize;
+    std::filesystem::path _prevImage, _nextImage;
+    float _zoom = 1.0f;
+    ImVec2 _pan;
 };
 
 #endif // OPENIMAGEWIDGET_H
