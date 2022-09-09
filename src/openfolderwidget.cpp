@@ -40,6 +40,9 @@ void OpenFolderWidget::OnPathChanged(
     _pathChangeIsTravel = false;
 
     _activeSubPath.clear();
+    _showFind = false;
+    _findBuffer = L"";
+    _buffer[0] = 0;
 
     _itemsInFolder.clear();
     for (auto const &dir_entry : std::filesystem::directory_iterator{_documentPath})
@@ -81,6 +84,26 @@ inline bool ends_with(
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
+class StyleGuard
+{
+public:
+    virtual ~StyleGuard()
+    {
+        ImGui::PopStyleColor(_stylesToPop);
+    }
+
+    void Push(
+        ImGuiCol idx,
+        ImU32 col)
+    {
+        ImGui::PushStyleColor(idx, col);
+        _stylesToPop++;
+    }
+
+private:
+    int _stylesToPop = 0;
+};
+
 void OpenFolderWidget::OnRender()
 {
     if (_documentPath.empty())
@@ -89,27 +112,95 @@ void OpenFolderWidget::OnRender()
     }
 
     bool shiftFocusToFind = false;
-    static char buffer[64] = {0};
 
     ImGui::Begin(ConstructWindowID().c_str(), &_isOpen);
 
-    if (ImGui::Button(ICON_MD_WEST))
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_DockHierarchy))
     {
-        TravelBack();
+        if (ImGui::IsKeyPressed(ImGuiKey_F) && ImGui::GetIO().KeyCtrl)
+        {
+            _showFind = shiftFocusToFind = true;
+        }
+        else if (_showFind && ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            _showFind = false;
+            _findBuffer = L"";
+            _buffer[0] = 0;
+        }
+        else if (!_showFind)
+        {
+            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+            {
+                if (ImGui::GetIO().KeyAlt)
+                {
+                    Open(_documentPath.parent_path());
+                }
+                else
+                {
+                    MoveSelectionUp(ImGui::GetIO().KeyCtrl ? 5 : 1);
+                }
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+            {
+                MoveSelectionDown(ImGui::GetIO().KeyCtrl ? 5 : 1);
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_Enter))
+            {
+                ActivateItem(_activeSubPath);
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_Backspace))
+            {
+                Open(_documentPath.parent_path());
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_End))
+            {
+                MoveSelectionToEnd();
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_Home))
+            {
+                MoveSelectionToStart();
+            }
+        }
+    }
+
+    {
+        StyleGuard style;
+        if (_travelledPaths.empty())
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
+        if (ImGui::Button(ICON_MD_WEST))
+        {
+            TravelBack();
+        }
     }
 
     ImGui::SameLine(0.0f, 5.0f);
 
-    if (ImGui::Button(ICON_MD_EAST))
     {
-        TravelForward();
+        StyleGuard style;
+        if (_pathsToTravel.empty())
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
+        if (ImGui::Button(ICON_MD_EAST))
+        {
+            TravelForward();
+        }
     }
 
     ImGui::SameLine(0.0f, 5.0f);
 
-    if (ImGui::Button(ICON_MD_NORTH))
     {
-        OpenParentDirectory();
+        StyleGuard style;
+        if (_documentPath == _documentPath.root_path())
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
+        if (ImGui::Button(ICON_MD_NORTH))
+        {
+            OpenParentDirectory();
+        }
     }
 
     for (auto &section : _pathInSections)
@@ -194,59 +285,12 @@ void OpenFolderWidget::OnRender()
         {
             ImGui::SetKeyboardFocusHere(0);
         }
-        if (ImGui::InputText("Find filename", buffer, 64))
+        if (ImGui::InputText("Find filename", _buffer, 64))
         {
-            _findBuffer = Convert(buffer);
+            _findBuffer = Convert(_buffer);
+            _activeSubPath.clear();
         }
         ImGui::EndChild();
-    }
-
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_DockHierarchy))
-    {
-        if (ImGui::IsKeyPressed(ImGuiKey_F) && ImGui::GetIO().KeyCtrl)
-        {
-            _showFind = shiftFocusToFind = true;
-        }
-        else if (_showFind && ImGui::IsKeyPressed(ImGuiKey_Escape))
-        {
-            _showFind = false;
-            _findBuffer = L"";
-            buffer[0] = 0;
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
-        {
-            if (ImGui::GetIO().KeyAlt)
-            {
-                Open(_documentPath.parent_path());
-            }
-            else
-            {
-                MoveSelectionUp(ImGui::GetIO().KeyCtrl ? 5 : 1);
-            }
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
-        {
-            MoveSelectionDown(ImGui::GetIO().KeyCtrl ? 5 : 1);
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_Enter))
-        {
-            ActivateItem(_activeSubPath);
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_Backspace))
-        {
-            if (!_showFind)
-            {
-                Open(_documentPath.parent_path());
-            }
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_End))
-        {
-            MoveSelectionToEnd();
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_Home))
-        {
-            MoveSelectionToStart();
-        }
     }
 
     ImGui::End();

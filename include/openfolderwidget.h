@@ -44,6 +44,7 @@ protected:
     std::vector<std::filesystem::path> _pathInSections;
     bool _showFind = false;
     std::wstring _findBuffer;
+    char _buffer[64] = {0};
 
     bool _pathChangeIsTravel = false;
     std::vector<std::filesystem::path> _travelledPaths;
