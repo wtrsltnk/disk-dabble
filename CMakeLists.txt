@@ -45,7 +45,6 @@ target_include_directories(disk-dabble
         "thirdparty/ImGuiColorTextEdit"
         "thirdparty/stb"
         "thirdparty/sqlite3/include"
-        "thirdparty/cpplinq"
         "${PROJECT_BINARY_DIR}"
 )
 
