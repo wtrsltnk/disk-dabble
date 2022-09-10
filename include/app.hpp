@@ -1,9 +1,11 @@
 #ifndef APP_H
 #define APP_H
 
+#include <bookmarkservice.h>
 #include <imgui.h>
 #include <memory>
 #include <opendocument.h>
+#include <serviceprovider.h>
 #include <string>
 #include <vector>
 
@@ -34,19 +36,23 @@ protected:
 
     void ClearWindowHandle();
 
-    void MainMenu();
+    std::filesystem::path GetUserProfileDir();
 
 private:
+    ServiceProvider _services;
+    BookmarkService bookmarkService;
     void *_windowHandle;
     unsigned int _dockId;
     ImFont *_monoSpaceFont = nullptr;
+    ImFont *_largeFont = nullptr;
 
     std::vector<std::unique_ptr<OpenDocument>> _openDocuments;
 
     std::vector<std::unique_ptr<OpenDocument>> _queuedDocuments;
 
     void ActivatePath(
-        const std::filesystem::path &path);
+        const std::filesystem::path &path,
+        int index = -1);
 
     void AddQueuedItems();
 };

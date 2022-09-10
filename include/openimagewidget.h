@@ -8,7 +8,9 @@
 class OpenImageWidget : public OpenDocument
 {
 public:
-    OpenImageWidget();
+    OpenImageWidget(
+        int index,
+        ServiceProvider*services);
 
     void OpenPreviousImageInParentDirectory();
 

@@ -2,7 +2,7 @@
 #define OPENTEXTWIDGET_H
 
 #include "opendocument.h"
-#include <ImGuiColorTextEdit/TextEditor.h>
+#include <TextEditor.h>
 #include <filesystem>
 #include <imgui.h>
 
@@ -10,6 +10,8 @@ class OpenTextWidget : public OpenDocument
 {
 public:
     OpenTextWidget(
+        int index,
+        ServiceProvider *services,
         ImFont *monoSpaceFont);
 
 private:

@@ -2,6 +2,7 @@
 #define OPENFOLDERWIDGET_H
 
 #include "opendocument.h"
+#include <bookmarkservice.h>
 #include <filesystem>
 #include <functional>
 
@@ -16,6 +17,8 @@ class OpenFolderWidget : public OpenDocument
 {
 public:
     OpenFolderWidget(
+        int index,
+        ServiceProvider *services,
         std::function<void(const std::filesystem::path &)> onActivatePath);
 
     void MoveSelectionUp(
@@ -37,12 +40,21 @@ public:
 
     void TravelForward();
 
+    void ToggleShowInfo();
+
 protected:
     std::function<void(const std::filesystem::path &)> _onActivatePath;
     std::filesystem::path _activeSubPath;
     std::vector<struct folderItem> _itemsInFolder;
     std::vector<std::filesystem::path> _pathInSections;
+    bool _isBookmark = false;
+    IBookmarkService *_bookmarkService = nullptr;
     bool _showFind = false;
+    bool _showInfo = false;
+    struct
+    {
+        std::filesystem::file_status status;
+    } _fileInfo;
     std::wstring _findBuffer;
     char _buffer[64] = {0};
 

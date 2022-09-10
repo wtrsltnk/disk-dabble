@@ -6,9 +6,14 @@
 #include <string>
 
 OpenFolderWidget::OpenFolderWidget(
+    int index,
+    ServiceProvider *services,
     std::function<void(const std::filesystem::path &)> onActivatePath)
-    : _onActivatePath(onActivatePath)
-{}
+    : OpenDocument(index, services),
+      _onActivatePath(onActivatePath)
+{
+    _bookmarkService = services->Resolve<IBookmarkService *>();
+}
 
 bool folderFirst(
     const struct folderItem &a,
@@ -43,6 +48,7 @@ void OpenFolderWidget::OnPathChanged(
     _showFind = false;
     _findBuffer = L"";
     _buffer[0] = 0;
+    _isBookmark = _bookmarkService->IsBookmarked(_documentPath);
 
     _itemsInFolder.clear();
     for (auto const &dir_entry : std::filesystem::directory_iterator{_documentPath})
@@ -115,6 +121,8 @@ void OpenFolderWidget::OnRender()
 
     ImGui::Begin(ConstructWindowID().c_str(), &_isOpen);
 
+    auto pos = ImGui::GetCursorPos();
+
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_DockHierarchy))
     {
         if (ImGui::IsKeyPressed(ImGuiKey_F) && ImGui::GetIO().KeyCtrl)
@@ -163,6 +171,34 @@ void OpenFolderWidget::OnRender()
         }
     }
 
+    ImGui::SetCursorPos(ImVec2(ImGui::GetContentRegionAvail().x - 30, pos.y));
+    {
+        StyleGuard style;
+        if (!_isBookmark)
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
+        if (ImGui::Button(ICON_MD_STAR))
+        {
+            _isBookmark = !_isBookmark;
+            _bookmarkService->SetBookmarked(_documentPath, _isBookmark);
+        }
+    }
+
+    ImGui::SetCursorPos(ImVec2(ImGui::GetContentRegionAvail().x - 80, pos.y));
+    {
+        StyleGuard style;
+        if (!_showInfo)
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
+        if (ImGui::Button(ICON_MD_INFO))
+        {
+            ToggleShowInfo();
+        }
+    }
+
+    ImGui::SetCursorPos(pos);
     {
         StyleGuard style;
         if (_travelledPaths.empty())
@@ -233,7 +269,7 @@ void OpenFolderWidget::OnRender()
         ImGui::Text("/");
     }
 
-    ImGui::BeginChild("entries", ImVec2(0.0f, _showFind ? -50.0f : 0.0f));
+    ImGui::BeginChild("entries", ImVec2(_showInfo ? -200.0f : 0.0f, _showFind ? -50.0f : 0.0f));
 
     for (auto const &dir_entry : _itemsInFolder)
     {
@@ -255,6 +291,32 @@ void OpenFolderWidget::OnRender()
         else
         {
             isSelected = ImGui::Selectable(ICON_MD_DESCRIPTION, _activeSubPath == dir_entry.path);
+        }
+
+        if (ImGui::BeginPopupContextItem())
+        {
+            if (isDir)
+            {
+                auto bookmarked = _bookmarkService->IsBookmarked(dir_entry.path);
+                if (!bookmarked)
+                {
+                    if (ImGui::MenuItem("Bookmark"))
+                    {
+                        _bookmarkService->SetBookmarked(dir_entry.path, true);
+                    }
+                }
+                else
+                {
+                    if (ImGui::MenuItem("Unbookmark"))
+                    {
+                        _bookmarkService->SetBookmarked(dir_entry.path, false);
+                    }
+                }
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Properties"))
+            {}
+            ImGui::EndPopup();
         }
 
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
@@ -282,6 +344,25 @@ void OpenFolderWidget::OnRender()
 
     ImGui::EndChild();
 
+    if (_showInfo)
+    {
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(
+            ImGuiCol_ChildBg,
+            IM_COL32(0, 0, 0, 25));
+
+        ImGui::BeginChild("Info", ImVec2(0.0f, _showFind ? -50.0f : 0.0f));
+
+        ImGui::Text("Filename:\n\t%s", Convert(_documentPath.filename().wstring()).c_str());
+
+        ImGui::Text("TODO");
+
+        ImGui::EndChild();
+
+        ImGui::PopStyleColor();
+    }
+
     if (_showFind)
     {
         ImGui::BeginChild("Find");
@@ -298,6 +379,16 @@ void OpenFolderWidget::OnRender()
     }
 
     ImGui::End();
+}
+
+void OpenFolderWidget::ToggleShowInfo()
+{
+    _showInfo = !_showInfo;
+
+    if (_showInfo)
+    {
+        _fileInfo.status = std::filesystem::status(_documentPath);
+    }
 }
 
 void OpenFolderWidget::MoveSelectionUp(

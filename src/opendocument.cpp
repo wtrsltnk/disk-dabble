@@ -4,8 +4,26 @@
 #include <locale>
 #include <sstream>
 
-OpenDocument::OpenDocument()
+OpenDocument::OpenDocument(
+    int index,
+    ServiceProvider *services)
+    : _services(services),
+      _index(NextIndex(index))
 {}
+
+int OpenDocument::NextIndex(
+    int index)
+{
+    if (index >= 0)
+    {
+        _indexer = index + 1;
+        return index;
+    }
+
+    return _indexer++;
+}
+
+int OpenDocument::_indexer = 0;
 
 void OpenDocument::Render()
 {
@@ -51,7 +69,7 @@ std::string OpenDocument::ConstructWindowID()
     {
         wss << _documentPath.root_path().wstring();
     }
-    wss << L"###" << static_cast<void *>(this);
+    wss << L"###" << _index;
 
     return converter.to_bytes(wss.str());
 }

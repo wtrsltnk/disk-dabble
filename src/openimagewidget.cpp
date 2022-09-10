@@ -4,9 +4,13 @@
 #include <algorithm>
 #include <glad/glad.h>
 #include <imgui.h>
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
-OpenImageWidget::OpenImageWidget() = default;
+OpenImageWidget::OpenImageWidget(
+    int index,
+    ServiceProvider *services)
+    : OpenDocument(index, services)
+{}
 
 void OpenImageWidget::OnPathChanged(
     const std::filesystem::path &oldPath)

@@ -2,12 +2,11 @@
 #define OPENDOCUMENT_H
 
 #include <filesystem>
+#include <serviceprovider.h>
 
 class OpenDocument
 {
 public:
-    OpenDocument();
-
     void Render();
 
     void Open(
@@ -17,9 +16,16 @@ public:
 
     bool IsOpen() const { return _isOpen; }
 
+    int Id() const { return _index; }
+
 protected:
+    OpenDocument(
+        int index,
+        ServiceProvider *services);
+
     std::filesystem::path _documentPath;
     bool _isOpen = true;
+    ServiceProvider *_services;
 
     virtual void OnRender() = 0;
 
@@ -36,6 +42,12 @@ protected:
 
 private:
     std::filesystem::path _changeToPath;
+    int _index = 0;
+
+    static int _indexer;
+
+    int NextIndex(
+        int index);
 };
 
 #endif // OPENDOCUMENT_H

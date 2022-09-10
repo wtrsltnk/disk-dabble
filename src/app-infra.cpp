@@ -14,7 +14,7 @@
 #define OPENGL_LATEST_VERSION_MAJOR 4
 #define OPENGL_LATEST_VERSION_MINOR 6
 
-static char szProgramName[] = "Glfw.Imgui.Minimal";
+static char szProgramName[] = "Disk Dabble";
 
 struct WindowHandle
 {
@@ -122,6 +122,10 @@ bool App::Init()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
+
+    io.IniFilename = nullptr;
+    ImGui::LoadIniSettingsFromDisk((GetUserProfileDir() / "imgui.ini").string().c_str());
+
     (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -138,6 +142,7 @@ bool App::Init()
     io.Fonts->AddFontFromFileTTF("fonts/MaterialIcons-Regular.ttf", 18.0f, &config, icon_ranges);
 
     _monoSpaceFont = io.Fonts->AddFontFromFileTTF("fonts/SourceCodePro-Regular.ttf", 18.0f);
+    _largeFont = io.Fonts->AddFontFromFileTTF("fonts/Poppins-Regular.ttf", 28.0f);
 
     // Setup Dear ImGui style
     //    ImGui::StyleColorsDark();
@@ -193,8 +198,7 @@ namespace ImGui
     ImGuiID DockSpaceOverViewport2(
         const ImGuiViewport *viewport,
         ImGuiDockNodeFlags dockspace_flags,
-        const ImGuiWindowClass *window_class,
-        std::function<void()> menu)
+        const ImGuiWindowClass *window_class)
     {
         if (viewport == NULL)
             viewport = GetMainViewport();
@@ -217,8 +221,6 @@ namespace ImGui
         PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         Begin(label, NULL, host_window_flags);
         PopStyleVar(3);
-
-        menu();
 
         ImGuiID dockspace_id = GetID("DockSpace");
         DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags, window_class);
@@ -252,10 +254,7 @@ int App::Run()
         _dockId = ImGui::DockSpaceOverViewport2(
             nullptr,
             ImGuiDockNodeFlags_PassthruCentralNode,
-            nullptr,
-            [&]() {
-                MainMenu();
-            });
+            nullptr);
 
         OnFrame();
 
@@ -276,6 +275,10 @@ int App::Run()
 
         glfwSwapBuffers(windowHandle->window);
     }
+
+    OnExit();
+
+    ImGui::SaveIniSettingsToDisk((GetUserProfileDir() / "imgui.ini").string().c_str());
 
     ClearWindowHandle();
 

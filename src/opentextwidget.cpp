@@ -4,8 +4,11 @@
 #include <imgui.h>
 
 OpenTextWidget::OpenTextWidget(
+    int index,
+    ServiceProvider *services,
     ImFont *monoSpaceFont)
-    : _monoSpaceFont(monoSpaceFont)
+    : OpenDocument(index, services),
+      _monoSpaceFont(monoSpaceFont)
 {}
 
 void OpenTextWidget::OnPathChanged(
