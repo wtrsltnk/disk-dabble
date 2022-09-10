@@ -174,6 +174,10 @@ void App::OnFrame()
 
         ImGui::Separator();
 
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
     AddQueuedItems();

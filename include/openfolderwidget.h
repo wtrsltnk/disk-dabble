@@ -42,6 +42,10 @@ public:
 
     void ToggleShowInfo();
 
+    void DeleteSelection();
+
+    void MoveSelectionToTrash();
+
 protected:
     std::function<void(const std::filesystem::path &)> _onActivatePath;
     std::filesystem::path _activeSubPath;
@@ -51,6 +55,8 @@ protected:
     IBookmarkService *_bookmarkService = nullptr;
     bool _showFind = false;
     bool _showInfo = false;
+    bool _showDeletePopup = false;
+    bool _showMoveToTrashPopup = false;
     struct
     {
         std::filesystem::file_status status;
@@ -63,6 +69,8 @@ protected:
     std::vector<std::filesystem::path> _pathsToTravel;
 
     virtual void OnRender();
+
+    void Refresh();
 
     virtual void OnPathChanged(
         const std::filesystem::path &oldPath);

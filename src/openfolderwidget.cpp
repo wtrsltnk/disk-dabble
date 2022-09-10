@@ -5,6 +5,10 @@
 #include <iostream>
 #include <string>
 
+// Find implementations at teh end of this file
+bool recycle_file_folder(
+    std::wstring path);
+
 OpenFolderWidget::OpenFolderWidget(
     int index,
     ServiceProvider *services,
@@ -27,23 +31,8 @@ bool folderFirst(
     return a.isDir > b.isDir;
 }
 
-void OpenFolderWidget::OnPathChanged(
-    const std::filesystem::path &oldPath)
+void OpenFolderWidget::Refresh()
 {
-    if (!oldPath.empty())
-    {
-        if (!_pathChangeIsTravel)
-        {
-            _travelledPaths.push_back(oldPath);
-            _pathsToTravel.clear();
-        }
-        else
-        {
-            _pathsToTravel.push_back(oldPath);
-        }
-    }
-    _pathChangeIsTravel = false;
-
     _activeSubPath.clear();
     _showFind = false;
     _findBuffer = L"";
@@ -76,6 +65,26 @@ void OpenFolderWidget::OnPathChanged(
     _pathInSections.push_back(tmp.parent_path());
 
     std::reverse(_pathInSections.begin(), _pathInSections.end());
+}
+
+void OpenFolderWidget::OnPathChanged(
+    const std::filesystem::path &oldPath)
+{
+    if (!oldPath.empty())
+    {
+        if (!_pathChangeIsTravel)
+        {
+            _travelledPaths.push_back(oldPath);
+            _pathsToTravel.clear();
+        }
+        else
+        {
+            _pathsToTravel.push_back(oldPath);
+        }
+    }
+    _pathChangeIsTravel = false;
+
+    Refresh();
 }
 
 inline bool ends_with(
@@ -167,6 +176,17 @@ void OpenFolderWidget::OnRender()
             else if (ImGui::IsKeyPressed(ImGuiKey_Home))
             {
                 MoveSelectionToStart();
+            }
+            else if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+            {
+                if (ImGui::GetIO().KeyShift)
+                {
+                    _showDeletePopup = true;
+                }
+                else
+                {
+                    MoveSelectionToTrash();
+                }
             }
         }
     }
@@ -313,6 +333,14 @@ void OpenFolderWidget::OnRender()
                     }
                 }
             }
+            if (ImGui::MenuItem("Move to trash"))
+            {
+                _showMoveToTrashPopup = true;
+            }
+            if (ImGui::MenuItem("Delete"))
+            {
+                _showDeletePopup = true;
+            }
             ImGui::Separator();
             if (ImGui::MenuItem("Properties"))
             {}
@@ -379,6 +407,56 @@ void OpenFolderWidget::OnRender()
     }
 
     ImGui::End();
+
+    if (_showDeletePopup)
+    {
+        ImGui::OpenPopup("Delete item?");
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(250, 120));
+    if (ImGui::BeginPopupModal("Delete item?", &_showDeletePopup))
+    {
+        ImGui::Text("Are you sure?");
+        if (ImGui::Button("Yes"))
+        {
+            _showDeletePopup = false;
+            DeleteSelection();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("No"))
+        {
+            _showDeletePopup = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (_showMoveToTrashPopup)
+    {
+        ImGui::OpenPopup("Move item to trash?");
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(250, 120));
+    if (ImGui::BeginPopupModal("Move item to trash?", &_showMoveToTrashPopup))
+    {
+        ImGui::Text("Are you sure?");
+        if (ImGui::Button("Yes"))
+        {
+            _showMoveToTrashPopup = false;
+            MoveSelectionToTrash();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("No"))
+        {
+            _showMoveToTrashPopup = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void OpenFolderWidget::ToggleShowInfo()
@@ -491,6 +569,20 @@ void OpenFolderWidget::MoveSelectionToStart()
     _activeSubPath = _itemsInFolder.front().path;
 }
 
+void OpenFolderWidget::DeleteSelection()
+{
+    std::filesystem::remove(_activeSubPath);
+
+    Refresh();
+}
+
+void OpenFolderWidget::MoveSelectionToTrash()
+{
+    recycle_file_folder(_activeSubPath);
+
+    Refresh();
+}
+
 void OpenFolderWidget::OpenParentDirectory()
 {
     Open(_documentPath.parent_path());
@@ -541,3 +633,31 @@ void OpenFolderWidget::TravelForward()
 
     Open(nextPath);
 }
+
+#ifdef _WIN32
+#include <windows.h>
+
+bool recycle_file_folder(
+    std::wstring path)
+{
+
+    std::wstring widestr = path + std::wstring(1, L'\0');
+
+    SHFILEOPSTRUCT fileOp;
+    fileOp.hwnd = NULL;
+    fileOp.wFunc = FO_DELETE;
+    fileOp.pFrom = widestr.c_str();
+    fileOp.pTo = NULL;
+    fileOp.fFlags = FOF_ALLOWUNDO | FOF_NOERRORUI | FOF_NOCONFIRMATION | FOF_SILENT;
+    int result = SHFileOperation(&fileOp);
+
+    if (result != 0)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+#endif
