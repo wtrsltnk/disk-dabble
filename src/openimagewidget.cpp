@@ -1,9 +1,12 @@
 #include "openimagewidget.h"
 
+#include <EXIF.H>
 #include <IconsMaterialDesign.h>
 #include <algorithm>
+#include <cmath>
 #include <glad/glad.h>
 #include <imgui.h>
+#include <iostream>
 #include <stb_image.h>
 
 OpenImageWidget::OpenImageWidget(
@@ -68,7 +71,79 @@ void OpenImageWidget::OnPathChanged(
 
         _prevImage = dir_entry;
     }
+
+    auto ext = _documentPath.extension().wstring();
+
+    std::transform(
+        ext.begin(),
+        ext.end(),
+        ext.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
+    if (ext == L".jpg" || ext == L".jpeg")
+    {
+        _rotate = 0.0f;
+
+        auto file = fopen(_documentPath.string().c_str(), "rb");
+
+        Cexif exif;
+        if (exif.DecodeExif(file))
+        {
+            if (exif.m_exifinfo->Orientation == 1)
+            {
+                _rotate = 0.0;
+            }
+            else if (exif.m_exifinfo->Orientation == 8)
+            {
+                _rotate += -90.0 * 4.0 * atan(1.0) / 180.0;
+            }
+            else if (exif.m_exifinfo->Orientation == 3)
+            {
+                _rotate += 180.0 * 4.0 * atan(1.0) / 180.0;
+            }
+            else if (exif.m_exifinfo->Orientation == 6)
+            {
+                _rotate += 90.0 * 4.0 * atan(1.0) / 180.0;
+            }
+        }
+
+        fclose(file);
+    }
 }
+
+namespace ImGui
+{
+#include <math.h>
+    static inline ImVec2 operator+(const ImVec2 &lhs, const ImVec2 &rhs)
+    {
+        return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
+    }
+    static inline ImVec2 ImRotate(const ImVec2 &v, float cos_a, float sin_a)
+    {
+        return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a);
+    }
+    void ImageRotated(ImTextureID tex_id, ImVec2 center, ImVec2 size, float angle)
+    {
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+
+        float cos_a = cosf(angle);
+        float sin_a = sinf(angle);
+        ImVec2 pos[4] =
+            {
+                center + ImRotate(ImVec2(-size.x * 0.5f, -size.y * 0.5f), cos_a, sin_a),
+                center + ImRotate(ImVec2(+size.x * 0.5f, -size.y * 0.5f), cos_a, sin_a),
+                center + ImRotate(ImVec2(+size.x * 0.5f, +size.y * 0.5f), cos_a, sin_a),
+                center + ImRotate(ImVec2(-size.x * 0.5f, +size.y * 0.5f), cos_a, sin_a)};
+        ImVec2 uvs[4] =
+            {
+                ImVec2(0.0f, 0.0f),
+                ImVec2(1.0f, 0.0f),
+                ImVec2(1.0f, 1.0f),
+                ImVec2(0.0f, 1.0f)};
+
+        draw_list->AddImageQuad(tex_id, pos[0], pos[1], pos[2], pos[3], uvs[0], uvs[1], uvs[2], uvs[3], IM_COL32_WHITE);
+    }
+} // namespace ImGui
 
 void OpenImageWidget::OnRender()
 {
@@ -99,16 +174,23 @@ void OpenImageWidget::OnRender()
         scale.x = scale.y;
     }
 
-    _zoom += (ImGui::GetIO().MouseWheel / 10.0f);
-    if (_zoom < 0.1f) _zoom = 0.1f;
-
     scale.x *= _zoom;
     scale.y *= _zoom;
 
-    auto pos = ImGui::GetCursorPos();
+    auto spos = ImGui::GetCursorScreenPos();
 
     ImGui::InvisibleButton("###panning", availableForImage);
 
+    if (ImGui::IsItemHovered())
+    {
+        _zoom += (ImGui::GetIO().MouseWheel / 10.0f);
+        if (_zoom < 0.1f) _zoom = 0.1f;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_R))
+        {
+            _rotate += 90.0 * 4.0 * atan(1.0) / 180.0;
+        }
+    }
     if (ImGui::IsItemActive() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
     {
         _pan.x += ImGui::GetIO().MouseDelta.x;
@@ -120,18 +202,16 @@ void OpenImageWidget::OnRender()
         scale.y * _textureSize.y);
 
     auto imagePos = ImVec2(
-        pos.x + _pan.x + (availableForImage.x - imageSize.x) / 2.0f,
-        pos.y + _pan.y + (availableForImage.y - imageSize.y) / 2.0f);
+        spos.x + _pan.x + (availableForImage.x - imageSize.x) / 2.0f,
+        spos.y + _pan.y + (availableForImage.y - imageSize.y) / 2.0f);
 
     ImGui::SetCursorPos(imagePos);
 
-    ImGui::Image(
+    ImGui::ImageRotated(
         (void *)(intptr_t)(GLuint)_textureId,
+        ImVec2(imagePos.x + (imageSize.x / 2.0f), imagePos.y + (imageSize.y / 2.0f)),
         imageSize,
-        uv_min,
-        uv_max,
-        tint_col,
-        border_col);
+        _rotate);
 
     ImGui::SetCursorPos(
         ImVec2(ImGui::GetStyle().ItemSpacing.y,
@@ -149,13 +229,23 @@ void OpenImageWidget::OnRender()
     }
 
     ImGui::SetCursorPos(
-        ImVec2((available.x - buttonSize) / 2.0f,
+        ImVec2(available.x / 2.0f,
                available.y - ImGui::GetStyle().ItemSpacing.y));
 
     if (ImGui::Button(ICON_MD_FULLSCREEN, ImVec2(buttonSize, buttonSize)))
     {
         _zoom *= 1.f / scale.x;
         _pan = ImVec2();
+        _rotate = 0.0f;
+    }
+
+    ImGui::SetCursorPos(
+        ImVec2(available.x / 2.0f - buttonSize,
+               available.y - ImGui::GetStyle().ItemSpacing.y));
+
+    if (ImGui::Button(ICON_MD_ROTATE_90_DEGREES_CW, ImVec2(buttonSize, buttonSize)))
+    {
+        _rotate += 90.0 * 4.0 * atan(1.0) / 180.0;
     }
 
     ImGui::SetCursorPos(

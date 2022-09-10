@@ -31,6 +31,8 @@ add_executable(disk-dabble
     thirdparty/ImGuiColorTextEdit/TextEditor.h
     thirdparty/stb/stb_image.cpp
     thirdparty/stb/stb_image.h
+    thirdparty/Davide-Pizzolato/EXIF.CPP
+    thirdparty/Davide-Pizzolato/EXIF.H
 )
 
 target_compile_features(disk-dabble
@@ -45,6 +47,7 @@ target_include_directories(disk-dabble
         "thirdparty/ImGuiColorTextEdit"
         "thirdparty/stb"
         "thirdparty/sqlite3/include"
+        "thirdparty/Davide-Pizzolato"
         "${PROJECT_BINARY_DIR}"
 )
 

@@ -10,7 +10,7 @@ class OpenImageWidget : public OpenDocument
 public:
     OpenImageWidget(
         int index,
-        ServiceProvider*services);
+        ServiceProvider *services);
 
     void OpenPreviousImageInParentDirectory();
 
@@ -30,6 +30,7 @@ private:
     ImVec2 _textureSize;
     std::filesystem::path _prevImage, _nextImage;
     float _zoom = 1.0f;
+    float _rotate = 0.0f;
     ImVec2 _pan;
 };
 
