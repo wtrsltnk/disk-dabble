@@ -11,15 +11,14 @@ add_subdirectory(thirdparty/sqlite3)
 
 add_executable(disk-dabble
     include/app.hpp
-    include/bookmarkservice.h
     include/opendocument.h
     include/openfolderwidget.h
     include/openimagewidget.h
     include/opentextwidget.h
     include/serviceprovider.h
+    include/settingsservice.h
     src/app-infra.cpp
     src/app.cpp
-    src/bookmarkservice.cpp
     src/glad.c
     src/opendocument.cpp
     src/openfolderwidget.cpp
@@ -27,6 +26,7 @@ add_executable(disk-dabble
     src/opentextwidget.cpp
     src/program.cpp
     src/serviceprovider.cpp
+    src/settingsservice.cpp
     thirdparty/ImGuiColorTextEdit/TextEditor.cpp
     thirdparty/ImGuiColorTextEdit/TextEditor.h
     thirdparty/stb/stb_image.cpp

@@ -2,9 +2,9 @@
 #define OPENFOLDERWIDGET_H
 
 #include "opendocument.h"
-#include <bookmarkservice.h>
 #include <filesystem>
 #include <functional>
+#include <settingsservice.h>
 
 struct folderItem
 {

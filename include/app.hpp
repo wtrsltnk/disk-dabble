@@ -1,11 +1,11 @@
 #ifndef APP_H
 #define APP_H
 
-#include <bookmarkservice.h>
 #include <imgui.h>
 #include <memory>
 #include <opendocument.h>
 #include <serviceprovider.h>
+#include <settingsservice.h>
 #include <string>
 #include <vector>
 
@@ -40,7 +40,7 @@ protected:
 
 private:
     ServiceProvider _services;
-    BookmarkService bookmarkService;
+    SettingsService _settingsService;
     void *_windowHandle;
     unsigned int _dockId;
     ImFont *_monoSpaceFont = nullptr;

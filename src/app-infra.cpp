@@ -21,7 +21,8 @@ struct WindowHandle
     GLFWwindow *window;
 };
 
-App::App(const std::vector<std::string> &args)
+App::App(
+    const std::vector<std::string> &args)
     : _args(args)
 {}
 

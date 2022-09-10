@@ -15,10 +15,10 @@ void App::OnInit()
 {
     _services.Add<IBookmarkService *>(
         [&](ServiceProvider &sp) -> GenericServicePtr {
-            return (GenericServicePtr)&bookmarkService;
+            return (GenericServicePtr)&_settingsService;
         });
 
-    auto openFiles = bookmarkService.GetOpenFiles();
+    auto openFiles = _settingsService.GetOpenFiles();
 
     for (const auto &pair : openFiles)
     {
@@ -47,7 +47,7 @@ void App::OnExit()
         res.insert(std::make_pair(openDoc->Id(), openDoc->DocumentPath()));
     }
 
-    bookmarkService.SetOpenFiles(res);
+    _settingsService.SetOpenFiles(res);
 }
 
 void App::ActivatePath(
@@ -158,11 +158,11 @@ void App::OnFrame()
             ImGui::CloseCurrentPopup();
         }
 
-        if (!bookmarkService.Bookmarks().empty())
+        if (!_settingsService.Bookmarks().empty())
         {
             ImGui::Separator();
 
-            for (auto &bookmark : bookmarkService.Bookmarks())
+            for (auto &bookmark : _settingsService.Bookmarks())
             {
                 if (ImGui::Button(bookmark.filename().string().c_str(), buttonSize))
                 {

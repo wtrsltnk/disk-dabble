@@ -1,5 +1,5 @@
-#ifndef BOOKMARKSERVICE_H
-#define BOOKMARKSERVICE_H
+#ifndef SETTINGSSERVICE_H
+#define SETTINGSSERVICE_H
 
 #include <filesystem>
 #include <set>
@@ -21,6 +21,8 @@ public:
     virtual void SetBookmarked(
         const std::filesystem::path &path,
         bool isBookmarked) = 0;
+
+    virtual const std::set<std::filesystem::path> &Bookmarks() const = 0;
 };
 
 class ISettingsService
@@ -32,12 +34,12 @@ public:
         const std::map<int, std::filesystem::path> &openFiles) = 0;
 };
 
-class BookmarkService :
+class SettingsService :
     public IBookmarkService,
     public ISettingsService
 {
 public:
-    BookmarkService();
+    SettingsService();
 
     virtual bool IsBookmarked(
         const std::filesystem::path &path);
@@ -46,7 +48,7 @@ public:
         const std::filesystem::path &path,
         bool isBookmarked);
 
-    const std::set<std::filesystem::path> &Bookmarks() const { return _bookmarks; }
+    virtual const std::set<std::filesystem::path> &Bookmarks() const { return _bookmarks; }
 
     virtual std::map<int, std::filesystem::path> GetOpenFiles();
 
@@ -61,4 +63,4 @@ private:
     std::set<std::filesystem::path> _bookmarks;
 };
 
-#endif // BOOKMARKSERVICE_H
+#endif // SETTINGSSERVICE_H

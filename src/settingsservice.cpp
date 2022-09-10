@@ -1,9 +1,9 @@
-#include "bookmarkservice.h"
+#include "settingsservice.h"
 
 #include <filesystem>
 #include <iostream>
 
-BookmarkService::BookmarkService()
+SettingsService::SettingsService()
 {
     auto userProfileDir = std::filesystem::path(getenv("USERPROFILE")) / "disk-dabble";
 
@@ -56,7 +56,7 @@ void EnsureTable(
     db->execute(queryBytes.c_str(), queryBytes.size());
 }
 
-void BookmarkService::EnsureTables()
+void SettingsService::EnsureTables()
 {
     auto bookmarkQuery = std::wstring(LR"(CREATE TABLE IF NOT EXISTS Bookmarks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +87,7 @@ void BookmarkService::EnsureTables()
     }
 }
 
-bool BookmarkService::IsBookmarked(
+bool SettingsService::IsBookmarked(
     const std::filesystem::path &path)
 {
     if (_bookmarks.find(path) != _bookmarks.end())
@@ -125,7 +125,7 @@ WHERE
     return false;
 }
 
-void BookmarkService::SetBookmarked(
+void SettingsService::SetBookmarked(
     const std::filesystem::path &path,
     bool isBookmarked)
 {
@@ -167,7 +167,7 @@ void BookmarkService::SetBookmarked(
     }
 }
 
-std::map<int, std::filesystem::path> BookmarkService::GetOpenFiles()
+std::map<int, std::filesystem::path> SettingsService::GetOpenFiles()
 {
     auto query = LR"(SELECT
     d.id,
@@ -205,7 +205,7 @@ FROM
     return std::map<int, std::filesystem::path>();
 }
 
-void BookmarkService::SetOpenFiles(
+void SettingsService::SetOpenFiles(
     const std::map<int, std::filesystem::path> &openFiles)
 {
     auto query = LR"(DELETE FROM OpenDocuments)";
