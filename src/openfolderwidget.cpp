@@ -3,6 +3,7 @@
 #include <IconsMaterialDesign.h>
 #include <imgui.h>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 // Find implementations at teh end of this file
@@ -16,7 +17,7 @@ OpenFolderWidget::OpenFolderWidget(
     : OpenDocument(index, services),
       _onActivatePath(onActivatePath)
 {
-    _bookmarkService = services->Resolve<IBookmarkService *>();
+    _settingsService = services->Resolve<ISettingsService *>();
 }
 
 bool folderFirst(
@@ -37,7 +38,7 @@ void OpenFolderWidget::Refresh()
     _showFind = false;
     _findBuffer = L"";
     _buffer[0] = 0;
-    _isBookmark = _bookmarkService->IsBookmarked(_documentPath);
+    _isBookmark = _settingsService->IsBookmarked(_documentPath);
 
     _itemsInFolder.clear();
     for (auto const &dir_entry : std::filesystem::directory_iterator{_documentPath})
@@ -98,26 +99,6 @@ inline bool ends_with(
 
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
-
-class StyleGuard
-{
-public:
-    virtual ~StyleGuard()
-    {
-        ImGui::PopStyleColor(_stylesToPop);
-    }
-
-    void Push(
-        ImGuiCol idx,
-        ImU32 col)
-    {
-        ImGui::PushStyleColor(idx, col);
-        _stylesToPop++;
-    }
-
-private:
-    int _stylesToPop = 0;
-};
 
 void OpenFolderWidget::OnRender()
 {
@@ -185,7 +166,9 @@ void OpenFolderWidget::OnRender()
                 }
                 else
                 {
+#ifdef _WIN32
                     MoveSelectionToTrash();
+#endif
                 }
             }
         }
@@ -201,7 +184,7 @@ void OpenFolderWidget::OnRender()
         if (ImGui::Button(ICON_MD_STAR))
         {
             _isBookmark = !_isBookmark;
-            _bookmarkService->SetBookmarked(_documentPath, _isBookmark);
+            _settingsService->SetBookmarked(_documentPath, _isBookmark);
         }
     }
 
@@ -289,7 +272,7 @@ void OpenFolderWidget::OnRender()
         ImGui::Text("/");
     }
 
-    ImGui::BeginChild("entries", ImVec2(_showInfo ? -200.0f : 0.0f, _showFind ? -50.0f : 0.0f));
+    ImGui::BeginChild("entries", ImVec2(0.0f, (_showFind ? -60.0f : 0.0f) + (_showInfo ? -130.0f : 0.0f)));
 
     for (auto const &dir_entry : _itemsInFolder)
     {
@@ -313,37 +296,90 @@ void OpenFolderWidget::OnRender()
             isSelected = ImGui::Selectable(ICON_MD_DESCRIPTION, _activeSubPath == dir_entry.path);
         }
 
-        if (ImGui::BeginPopupContextItem())
+        if (!_activeSubPath.empty() && ImGui::BeginPopupContextItem())
         {
+            if (ImGui::MenuItem("Open"))
+            {
+                _onActivatePath(dir_entry.path);
+            }
+
+            if (ImGui::BeginMenu("Open with..."))
+            {
+                auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath.extension().wstring());
+
+                for (const auto &openWithOption : openWithOptions)
+                {
+                    ImGui::PushID(openWithOption.id);
+                    if (ImGui::MenuItem(Convert(openWithOption.name).c_str()))
+                    {
+                        ExecuteCommand(_activeSubPath, openWithOption.command);
+                    }
+                    ImGui::PopID();
+                }
+
+                if (!openWithOptions.empty())
+                {
+                    ImGui::Separator();
+                }
+
+                if (ImGui::MenuItem("Manage all options..."))
+                {
+                    _showManageOpenWithOptionsPopup = true;
+                }
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Copy"))
+            {
+            }
+
+            if (ImGui::MenuItem("Cut"))
+            {
+            }
+
+            if (ImGui::MenuItem("Paste"))
+            {
+            }
+
+#ifdef _WIN32
+            if (ImGui::MenuItem("Move to trash"))
+            {
+                _showMoveToTrashPopup = true;
+            }
+#endif
+            if (ImGui::MenuItem("Delete"))
+            {
+                _showDeletePopup = true;
+            }
+
             if (isDir)
             {
-                auto bookmarked = _bookmarkService->IsBookmarked(dir_entry.path);
+                ImGui::Separator();
+
+                auto bookmarked = _settingsService->IsBookmarked(dir_entry.path);
                 if (!bookmarked)
                 {
                     if (ImGui::MenuItem("Bookmark"))
                     {
-                        _bookmarkService->SetBookmarked(dir_entry.path, true);
+                        _settingsService->SetBookmarked(dir_entry.path, true);
                     }
                 }
                 else
                 {
                     if (ImGui::MenuItem("Unbookmark"))
                     {
-                        _bookmarkService->SetBookmarked(dir_entry.path, false);
+                        _settingsService->SetBookmarked(dir_entry.path, false);
                     }
                 }
             }
-            if (ImGui::MenuItem("Move to trash"))
-            {
-                _showMoveToTrashPopup = true;
-            }
-            if (ImGui::MenuItem("Delete"))
-            {
-                _showDeletePopup = true;
-            }
+
             ImGui::Separator();
+
             if (ImGui::MenuItem("Properties"))
             {}
+
             ImGui::EndPopup();
         }
 
@@ -374,15 +410,13 @@ void OpenFolderWidget::OnRender()
 
     if (_showInfo)
     {
-        ImGui::SameLine();
-
         ImGui::PushStyleColor(
             ImGuiCol_ChildBg,
-            IM_COL32(0, 0, 0, 25));
+            IM_COL32(0, 0, 0, 15));
 
-        ImGui::BeginChild("Info", ImVec2(0.0f, _showFind ? -50.0f : 0.0f));
+        ImGui::BeginChild("Info", ImVec2(0.0f, 120.0f));
 
-        ImGui::Text("Filename:\n\t%s", Convert(_documentPath.filename().wstring()).c_str());
+        ImGui::Text("Filename:\t%s", Convert(_documentPath.filename().wstring()).c_str());
 
         ImGui::Text("TODO");
 
@@ -457,8 +491,136 @@ void OpenFolderWidget::OnRender()
         }
         ImGui::EndPopup();
     }
+
+    if (_showManageOpenWithOptionsPopup)
+    {
+        ImGui::OpenPopup("Manage Open With options");
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(750, 0));
+    if (ImGui::BeginPopupModal("Manage Open With options", &_showManageOpenWithOptionsPopup, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+    {
+        static char name_buffer[64] = {0};
+        static char pattern_buffer[512] = {0};
+        static char command_buffer[512] = {0};
+        static int item_current_idx = -1;
+        static bool form_is_dirty = false;
+
+        ImGui::Columns(2, "mycolumns");
+        ImGui::SetColumnWidth(0, 200.0f);
+
+        ImGui::Text("Open With options for %s", Convert(_activeSubPath.extension()).c_str());
+
+        if (ImGui::BeginListBox("##listbox 2", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+        {
+            auto openWithOptions = _settingsService->GetOpenWithOptions(L"*");
+
+            for (const auto &openWithOption : openWithOptions)
+            {
+                std::wstringstream wss;
+                wss << openWithOption.name << "###" << openWithOption.id;
+                const bool is_selected = (item_current_idx == openWithOption.id);
+                if (ImGui::Selectable(Convert(wss.str()).c_str(), is_selected))
+                {
+                    item_current_idx = openWithOption.id;
+
+                    strcpy_s(name_buffer, 63, Convert(openWithOption.name).c_str());
+                    strcpy_s(pattern_buffer, 511, Convert(openWithOption.extensionPatterns).c_str());
+                    strcpy_s(command_buffer, 511, Convert(openWithOption.command).c_str());
+                    form_is_dirty = false;
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndListBox();
+
+            if (ImGui::Button("Add option"))
+            {
+                std::wstringstream wss;
+                wss << L"*" << _activeSubPath.extension();
+
+                strcpy_s(name_buffer, 63, "New option");
+                strcpy_s(pattern_buffer, 511, Convert(wss.str()).c_str());
+                strcpy_s(command_buffer, 511, "");
+                form_is_dirty = false;
+
+                item_current_idx = _settingsService->AddOpenWithOption(
+                    Convert(name_buffer),
+                    wss.str(),
+                    L"");
+            }
+        }
+        ImGui::NextColumn();
+
+        if (ImGui::InputText("name", name_buffer, 64))
+        {
+            form_is_dirty = true;
+        }
+        if (ImGui::InputTextMultiline("pattern", pattern_buffer, 512))
+        {
+            form_is_dirty = true;
+        }
+        if (ImGui::InputTextMultiline("command", command_buffer, 512))
+        {
+            form_is_dirty = true;
+        }
+
+        if (form_is_dirty && ImGui::Button("Save"))
+        {
+            _settingsService->UpdateOpenWithOption(
+                item_current_idx,
+                Convert(name_buffer),
+                Convert(pattern_buffer),
+                Convert(command_buffer));
+
+            form_is_dirty = false;
+        }
+
+        if (!form_is_dirty && ImGui::Button("Delete"))
+        {
+            _settingsService->DeleteOpenWithOption(
+                item_current_idx);
+
+            item_current_idx = -1;
+
+            strcpy_s(name_buffer, 63, "");
+            strcpy_s(pattern_buffer, 511, "");
+            strcpy_s(command_buffer, 511, "");
+            form_is_dirty = false;
+        }
+
+        ImGui::Columns(1);
+        if (ImGui::Button("Close"))
+        {
+            _showManageOpenWithOptionsPopup = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+bool replace(std::wstring &str, const std::wstring &from, const std::wstring &to)
+{
+    size_t start_pos = str.find(from);
+    if (start_pos == std::wstring::npos)
+        return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
 }
 
+void OpenFolderWidget::ExecuteCommand(
+    const std::filesystem::path &path,
+    const std::wstring &command)
+{
+    std::wstring patchedCommand = command;
+
+    replace(patchedCommand, L"$1", path.wstring());
+
+    system(Convert(patchedCommand).c_str());
+}
 void OpenFolderWidget::ToggleShowInfo()
 {
     _showInfo = !_showInfo;
@@ -578,7 +740,9 @@ void OpenFolderWidget::DeleteSelection()
 
 void OpenFolderWidget::MoveSelectionToTrash()
 {
+#ifdef _WIN32
     recycle_file_folder(_activeSubPath);
+#endif
 
     Refresh();
 }

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <sstream>
 
 SettingsService::SettingsService()
 {
@@ -80,6 +81,22 @@ void SettingsService::EnsureTables()
     try
     {
         EnsureTable(_db, _wstringConverter, openDocumentsQuery);
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << ex.what() << std::endl;
+    }
+
+    auto openWithOptionsQuery = std::wstring(LR"(CREATE TABLE IF NOT EXISTS OpenWithOptions (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        pattern TEXT NOT NULL,
+        command TEXT NOT NULL
+    );)");
+
+    try
+    {
+        EnsureTable(_db, _wstringConverter, openWithOptionsQuery);
     }
     catch (std::exception &ex)
     {
@@ -237,5 +254,128 @@ void SettingsService::SetOpenFiles(
         {
             std::cout << _db->errmsg() << std::endl;
         }
+    }
+}
+std::vector<OpenWithOption> SettingsService::GetOpenWithOptions(
+    const std::wstring &extension)
+{
+    auto query = LR"(SELECT
+    o.id,
+    o.name,
+    o.pattern,
+    o.command
+FROM
+    OpenWithOptions o
+WHERE
+    o.pattern LIKE ?)";
+
+    try
+    {
+        auto queryBytes = _wstringConverter.to_bytes(query);
+        auto statement = _db->prepare<int, std::string, std::string, std::string>(queryBytes.c_str(), queryBytes.size());
+
+        std ::wstringstream wss;
+        wss << L"%" << extension << L"%";
+
+        auto rows = statement.execute(_wstringConverter.to_bytes(wss.str()));
+
+        if (!rows.empty())
+        {
+            std::vector<OpenWithOption> result;
+
+            for (const auto &row : rows)
+            {
+                OpenWithOption option;
+
+                option.id = std::get<0>(row);
+                option.name = _wstringConverter.from_bytes(std::get<1>(row));
+                option.extensionPatterns = _wstringConverter.from_bytes(std::get<2>(row));
+                option.command = _wstringConverter.from_bytes(std::get<3>(row));
+
+                result.push_back(option);
+            }
+
+            return result;
+        }
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << _db->errmsg() << std::endl;
+    }
+
+    return std::vector<OpenWithOption>();
+}
+
+int SettingsService::AddOpenWithOption(
+    const std::wstring &name,
+    const std::wstring &pattern,
+    const std::wstring &command)
+{
+    auto query = LR"(INSERT INTO OpenWithOptions (name, pattern, command) VALUES (?, ?, ?))";
+
+    auto queryBytes = _wstringConverter.to_bytes(query);
+
+    try
+    {
+        _db->prepare(queryBytes.c_str(), queryBytes.size())
+            .execute(
+                _wstringConverter.to_bytes(name),
+                _wstringConverter.to_bytes(pattern),
+                _wstringConverter.to_bytes(command));
+
+        queryBytes = _wstringConverter.to_bytes(L"SELECT last_insert_rowid()");
+
+        return _db->prepare<int>(queryBytes.c_str(), queryBytes.size())
+            .execute_value();
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << _db->errmsg() << std::endl;
+
+        return -1;
+    }
+}
+
+void SettingsService::UpdateOpenWithOption(
+    int id,
+    const std::wstring &name,
+    const std::wstring &pattern,
+    const std::wstring &command)
+{
+    auto query = LR"(Update OpenWithOptions SET name = ?, pattern = ?, command = ? WHERE id = ?)";
+
+    auto queryBytes = _wstringConverter.to_bytes(query);
+
+    try
+    {
+        _db->prepare(queryBytes.c_str(), queryBytes.size())
+            .execute(
+                _wstringConverter.to_bytes(name),
+                _wstringConverter.to_bytes(pattern),
+                _wstringConverter.to_bytes(command),
+                id);
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << _db->errmsg() << std::endl;
+    }
+}
+
+void SettingsService::DeleteOpenWithOption(
+    int id)
+{
+    auto query = LR"(DELETE FROM OpenWithOptions WHERE id = ?)";
+
+    auto queryBytes = _wstringConverter.to_bytes(query);
+
+    try
+    {
+        _db->prepare(queryBytes.c_str(), queryBytes.size())
+            .execute(
+                id);
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << _db->errmsg() << std::endl;
     }
 }

@@ -3,6 +3,27 @@
 
 #include <filesystem>
 #include <serviceprovider.h>
+#include <imgui.h>
+
+class StyleGuard
+{
+public:
+    virtual ~StyleGuard()
+    {
+        ImGui::PopStyleColor(_stylesToPop);
+    }
+
+    void Push(
+        ImGuiCol idx,
+        ImU32 col)
+    {
+        ImGui::PushStyleColor(idx, col);
+        _stylesToPop++;
+    }
+
+private:
+    int _stylesToPop = 0;
+};
 
 class OpenDocument
 {

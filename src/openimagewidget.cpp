@@ -216,20 +216,20 @@ void OpenImageWidget::OnRender()
     ImGui::SetCursorPos(
         ImVec2(ImGui::GetStyle().ItemSpacing.y,
                available.y - ImGui::GetStyle().ItemSpacing.y));
-    if (!_prevImage.empty())
     {
+        StyleGuard style;
+        if (_prevImage.empty())
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
         if (ImGui::Button(ICON_MD_WEST, ImVec2(buttonSize, buttonSize)))
         {
             OpenPreviousImageInParentDirectory();
         }
     }
-    else
-    {
-        ImGui::Text(ICON_MD_WEST);
-    }
 
     ImGui::SetCursorPos(
-        ImVec2(available.x / 2.0f,
+        ImVec2(available.x / 2.0f + 1,
                available.y - ImGui::GetStyle().ItemSpacing.y));
 
     if (ImGui::Button(ICON_MD_FULLSCREEN, ImVec2(buttonSize, buttonSize)))
@@ -240,7 +240,7 @@ void OpenImageWidget::OnRender()
     }
 
     ImGui::SetCursorPos(
-        ImVec2(available.x / 2.0f - buttonSize,
+        ImVec2(available.x / 2.0f - buttonSize - 1,
                available.y - ImGui::GetStyle().ItemSpacing.y));
 
     if (ImGui::Button(ICON_MD_ROTATE_90_DEGREES_CW, ImVec2(buttonSize, buttonSize)))
@@ -251,16 +251,16 @@ void OpenImageWidget::OnRender()
     ImGui::SetCursorPos(
         ImVec2(available.x + ImGui::GetStyle().ItemSpacing.y - buttonSize,
                available.y - ImGui::GetStyle().ItemSpacing.y));
-    if (!_nextImage.empty())
     {
+        StyleGuard style;
+        if (_nextImage.empty())
+        {
+            style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+        }
         if (ImGui::Button(ICON_MD_EAST, ImVec2(buttonSize, buttonSize)))
         {
             OpenNextImageInParentDirectory();
         }
-    }
-    else
-    {
-        ImGui::Text(ICON_MD_EAST);
     }
 
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_DockHierarchy))

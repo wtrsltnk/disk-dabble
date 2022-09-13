@@ -7,6 +7,9 @@ include(cmake/Dependencies.cmake)
 
 configure_file(config.h.in config.h)
 
+add_compile_definitions(UNICODE _UNICODE _UNICODE_)
+add_subdirectory(thirdparty/tiny-process-library)
+
 add_subdirectory(thirdparty/sqlite3)
 
 add_executable(disk-dabble
@@ -56,6 +59,7 @@ target_link_libraries(disk-dabble
         glfw
         imgui
         sqlite3
+        tiny-process-library
 )
 
 target_compile_definitions(disk-dabble

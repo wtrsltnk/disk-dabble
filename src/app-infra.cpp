@@ -150,6 +150,8 @@ bool App::Init()
     //    ImGui::StyleColorsClassic();
     ImGui::StyleColorsLight();
 
+    ImGui::GetStyle().FrameBorderSize = 1.0f;
+    ImGui::GetStyle().FrameRounding = 2.0f;
     ImGui::GetStyle().ItemSpacing = ImVec2(10.0f, 10.0f);
     ImGui::GetStyle().FramePadding = ImVec2(10.0f, 6.0f);
     ImGui::GetStyle().ItemInnerSpacing = ImVec2(10.0f, 6.0f);

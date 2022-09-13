@@ -52,11 +52,12 @@ protected:
     std::vector<struct folderItem> _itemsInFolder;
     std::vector<std::filesystem::path> _pathInSections;
     bool _isBookmark = false;
-    IBookmarkService *_bookmarkService = nullptr;
+    ISettingsService *_settingsService = nullptr;
     bool _showFind = false;
     bool _showInfo = false;
     bool _showDeletePopup = false;
     bool _showMoveToTrashPopup = false;
+    bool _showManageOpenWithOptionsPopup = false;
     struct
     {
         std::filesystem::file_status status;
@@ -74,6 +75,10 @@ protected:
 
     virtual void OnPathChanged(
         const std::filesystem::path &oldPath);
+
+    void ExecuteCommand(
+        const std::filesystem::path &path,
+        const std::wstring &command);
 };
 
 #endif // OPENFOLDERWIDGET_H
