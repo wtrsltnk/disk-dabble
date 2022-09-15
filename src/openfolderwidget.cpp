@@ -305,14 +305,21 @@ void OpenFolderWidget::OnRender()
 
             if (ImGui::BeginMenu("Open with..."))
             {
-                auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath.extension().wstring());
+                auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath);
 
                 for (const auto &openWithOption : openWithOptions)
                 {
                     ImGui::PushID(openWithOption.id);
                     if (ImGui::MenuItem(Convert(openWithOption.name).c_str()))
                     {
-                        ExecuteCommand(_activeSubPath, openWithOption.command);
+                        if (openWithOption.isCommandLineApp)
+                        {
+                            ExecuteRunInCommand(_activeSubPath, openWithOption.command);
+                        }
+                        else
+                        {
+                            ExecuteOpenWithCommand(_activeSubPath, openWithOption.command);
+                        }
                     }
                     ImGui::PopID();
                 }
@@ -503,17 +510,18 @@ void OpenFolderWidget::OnRender()
         static char name_buffer[64] = {0};
         static char pattern_buffer[512] = {0};
         static char command_buffer[512] = {0};
+        static bool is_cmd_app = false;
         static int item_current_idx = -1;
         static bool form_is_dirty = false;
+
+        ImGui::Text("Open With options for %s", Convert(_activeSubPath).c_str());
 
         ImGui::Columns(2, "mycolumns");
         ImGui::SetColumnWidth(0, 200.0f);
 
-        ImGui::Text("Open With options for %s", Convert(_activeSubPath.extension()).c_str());
-
         if (ImGui::BeginListBox("##listbox 2", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
         {
-            auto openWithOptions = _settingsService->GetOpenWithOptions(L"*");
+            auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath.wstring());
 
             for (const auto &openWithOption : openWithOptions)
             {
@@ -527,6 +535,7 @@ void OpenFolderWidget::OnRender()
                     strcpy_s(name_buffer, 63, Convert(openWithOption.name).c_str());
                     strcpy_s(pattern_buffer, 511, Convert(openWithOption.extensionPatterns).c_str());
                     strcpy_s(command_buffer, 511, Convert(openWithOption.command).c_str());
+                    is_cmd_app = openWithOption.isCommandLineApp;
                     form_is_dirty = false;
                 }
 
@@ -546,12 +555,14 @@ void OpenFolderWidget::OnRender()
                 strcpy_s(name_buffer, 63, "New option");
                 strcpy_s(pattern_buffer, 511, Convert(wss.str()).c_str());
                 strcpy_s(command_buffer, 511, "");
+                is_cmd_app = false;
                 form_is_dirty = false;
 
                 item_current_idx = _settingsService->AddOpenWithOption(
                     Convert(name_buffer),
                     wss.str(),
-                    L"");
+                    L"",
+                    false);
             }
         }
         ImGui::NextColumn();
@@ -564,7 +575,15 @@ void OpenFolderWidget::OnRender()
         {
             form_is_dirty = true;
         }
+        ImGui::TextWrapped("Add patterns to match this option to. Each line is test separately. Wildcards can be used like for example \"*.txt\".");
+
         if (ImGui::InputTextMultiline("command", command_buffer, 512))
+        {
+            form_is_dirty = true;
+        }
+        ImGui::TextWrapped("Use $fullpath, $filename, $extension or $parentpath in your command to be replaced with the path value the user is executing this action on.");
+
+        if (ImGui::Checkbox("Run in command window", &is_cmd_app))
         {
             form_is_dirty = true;
         }
@@ -575,7 +594,8 @@ void OpenFolderWidget::OnRender()
                 item_current_idx,
                 Convert(name_buffer),
                 Convert(pattern_buffer),
-                Convert(command_buffer));
+                Convert(command_buffer),
+                is_cmd_app);
 
             form_is_dirty = false;
         }
@@ -602,25 +622,7 @@ void OpenFolderWidget::OnRender()
         ImGui::EndPopup();
     }
 }
-bool replace(std::wstring &str, const std::wstring &from, const std::wstring &to)
-{
-    size_t start_pos = str.find(from);
-    if (start_pos == std::wstring::npos)
-        return false;
-    str.replace(start_pos, from.length(), to);
-    return true;
-}
 
-void OpenFolderWidget::ExecuteCommand(
-    const std::filesystem::path &path,
-    const std::wstring &command)
-{
-    std::wstring patchedCommand = command;
-
-    replace(patchedCommand, L"$1", path.wstring());
-
-    system(Convert(patchedCommand).c_str());
-}
 void OpenFolderWidget::ToggleShowInfo()
 {
     _showInfo = !_showInfo;

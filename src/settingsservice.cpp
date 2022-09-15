@@ -91,7 +91,8 @@ void SettingsService::EnsureTables()
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         pattern TEXT NOT NULL,
-        command TEXT NOT NULL
+        command TEXT NOT NULL,
+        is_cmd_app INTEGER NOT NULL
     );)");
 
     try
@@ -257,27 +258,34 @@ void SettingsService::SetOpenFiles(
     }
 }
 std::vector<OpenWithOption> SettingsService::GetOpenWithOptions(
-    const std::wstring &extension)
+    const std::filesystem::path &file)
 {
     auto query = LR"(SELECT
     o.id,
     o.name,
     o.pattern,
-    o.command
+    o.command,
+    o.is_cmd_app
 FROM
     OpenWithOptions o
 WHERE
-    o.pattern LIKE ?)";
+    o.pattern LIKE ?
+ OR o.pattern LIKE ?)";
 
     try
     {
         auto queryBytes = _wstringConverter.to_bytes(query);
-        auto statement = _db->prepare<int, std::string, std::string, std::string>(queryBytes.c_str(), queryBytes.size());
+        auto statement = _db->prepare<int, std::string, std::string, std::string, int>(queryBytes.c_str(), queryBytes.size());
 
-        std ::wstringstream wss;
-        wss << L"%" << extension << L"%";
+        std ::wstringstream wss1;
+        wss1 << L"%*" << file.extension().wstring() << L"%";
 
-        auto rows = statement.execute(_wstringConverter.to_bytes(wss.str()));
+        std ::wstringstream wss2;
+        wss2 << L"%" << file.filename().wstring() << L"%";
+
+        auto rows = statement.execute(
+            _wstringConverter.to_bytes(wss1.str()),
+            _wstringConverter.to_bytes(wss2.str()));
 
         if (!rows.empty())
         {
@@ -291,6 +299,7 @@ WHERE
                 option.name = _wstringConverter.from_bytes(std::get<1>(row));
                 option.extensionPatterns = _wstringConverter.from_bytes(std::get<2>(row));
                 option.command = _wstringConverter.from_bytes(std::get<3>(row));
+                option.isCommandLineApp = std::get<4>(row) != 0;
 
                 result.push_back(option);
             }
@@ -309,9 +318,10 @@ WHERE
 int SettingsService::AddOpenWithOption(
     const std::wstring &name,
     const std::wstring &pattern,
-    const std::wstring &command)
+    const std::wstring &command,
+    bool isCommandLineApp)
 {
-    auto query = LR"(INSERT INTO OpenWithOptions (name, pattern, command) VALUES (?, ?, ?))";
+    auto query = LR"(INSERT INTO OpenWithOptions (name, pattern, command, is_cmd_app) VALUES (?, ?, ?, ?))";
 
     auto queryBytes = _wstringConverter.to_bytes(query);
 
@@ -321,7 +331,8 @@ int SettingsService::AddOpenWithOption(
             .execute(
                 _wstringConverter.to_bytes(name),
                 _wstringConverter.to_bytes(pattern),
-                _wstringConverter.to_bytes(command));
+                _wstringConverter.to_bytes(command),
+                isCommandLineApp ? 1 : 0);
 
         queryBytes = _wstringConverter.to_bytes(L"SELECT last_insert_rowid()");
 
@@ -340,9 +351,10 @@ void SettingsService::UpdateOpenWithOption(
     int id,
     const std::wstring &name,
     const std::wstring &pattern,
-    const std::wstring &command)
+    const std::wstring &command,
+    bool isCommandLineApp)
 {
-    auto query = LR"(Update OpenWithOptions SET name = ?, pattern = ?, command = ? WHERE id = ?)";
+    auto query = LR"(Update OpenWithOptions SET name = ?, pattern = ?, command = ?, is_cmd_app = ? WHERE id = ?)";
 
     auto queryBytes = _wstringConverter.to_bytes(query);
 
@@ -353,6 +365,7 @@ void SettingsService::UpdateOpenWithOption(
                 _wstringConverter.to_bytes(name),
                 _wstringConverter.to_bytes(pattern),
                 _wstringConverter.to_bytes(command),
+                isCommandLineApp ? 1 : 0,
                 id);
     }
     catch (std::exception &ex)

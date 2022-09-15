@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 #include <imgui.h>
 #include <iostream>
+#include <sstream>
 
 #include <IconsMaterialDesign.h>
 #include <openfolderwidget.h>
@@ -206,6 +207,63 @@ void App::OnExit()
     AppLog.FinishThread();
 }
 
+bool replace(
+    std::wstring &str,
+    const std::wstring &from,
+    const std::wstring &to)
+{
+    size_t start_pos = str.find(from);
+
+    if (start_pos == std::wstring::npos)
+    {
+        return false;
+    }
+
+    str.replace(start_pos, from.length(), to);
+
+    return true;
+}
+
+std::wstring PatchCommand(
+    const std::filesystem::path &path,
+    const std::wstring &command)
+{
+    std::wstring patchedCommand = command;
+
+    replace(patchedCommand, L"$fullpath", path.wstring());
+    replace(patchedCommand, L"$parentpath", path.parent_path().wstring());
+    replace(patchedCommand, L"$filename", path.filename().wstring());
+
+    return patchedCommand;
+}
+
+void ExecuteRunInCommand(
+    const std::filesystem::path &path,
+    const std::wstring &command)
+{
+    std::wstring patchedCommand = PatchCommand(path, command);
+
+    std::wcout << L"Running file in:" << patchedCommand << std::endl;
+
+    AppLog.AddLog("Starting command:\n");
+
+    std::wstringstream wss;
+    wss << L"cmd /C " << patchedCommand;
+
+    AppLog.StartProcess(wss.str(), L"");
+}
+
+void ExecuteOpenWithCommand(
+    const std::filesystem::path &path,
+    const std::wstring &command)
+{
+    std::wstring patchedCommand = PatchCommand(path, command);
+
+    std::wcout << L"Opening file with:" << patchedCommand << std::endl;
+
+    system(OpenDocument::Convert(patchedCommand).c_str());
+}
+
 void App::ActivatePath(
     const std::filesystem::path &path,
     int index)
@@ -218,6 +276,9 @@ void App::ActivatePath(
             [&](const std::filesystem::path &p) {
                 this->ActivatePath(std::move(p));
             });
+
+        widget->ExecuteOpenWithCommand = ExecuteOpenWithCommand;
+        widget->ExecuteRunInCommand = ExecuteRunInCommand;
 
         widget->Open(path);
 
@@ -232,6 +293,10 @@ void App::ActivatePath(
         widget->Open(path);
 
         _queuedDocuments.push_back(std::move(widget));
+    }
+    else if (path.extension() == L".exe" || path.extension() == L".bat" || path.extension() == L".cmd")
+    {
+        ExecuteRunInCommand(path, L"start $fullpath");
     }
     else
     {
@@ -269,6 +334,7 @@ void App::OnFrame()
         item->Render();
     }
 
+    ImGui::SetNextWindowDockID(_dockId, ImGuiCond_FirstUseEver);
     ImGui::PushFont(_monoSpaceFont);
     AppLog.Draw("Output");
     ImGui::PopFont();

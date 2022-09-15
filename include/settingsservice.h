@@ -17,6 +17,7 @@ public:
     std::wstring name;
     std::wstring extensionPatterns;
     std::wstring command;
+    bool isCommandLineApp;
 };
 
 class ISettingsService
@@ -39,18 +40,20 @@ public:
         const std::map<int, std::filesystem::path> &openFiles) = 0;
 
     virtual std::vector<OpenWithOption> GetOpenWithOptions(
-        const std::wstring &extension) = 0;
+        const std::filesystem::path &file) = 0;
 
     virtual int AddOpenWithOption(
         const std::wstring &name,
         const std::wstring &pattern,
-        const std::wstring &command) = 0;
+        const std::wstring &command,
+        bool isCommandLineApp) = 0;
 
     virtual void UpdateOpenWithOption(
         int id,
         const std::wstring &name,
         const std::wstring &pattern,
-        const std::wstring &command) = 0;
+        const std::wstring &command,
+        bool isCommandLineApp) = 0;
 
     virtual void DeleteOpenWithOption(
         int id) = 0;
@@ -77,18 +80,20 @@ public:
         const std::map<int, std::filesystem::path> &openFiles);
 
     virtual std::vector<OpenWithOption> GetOpenWithOptions(
-        const std::wstring &extension);
+        const std::filesystem::path &file);
 
     virtual int AddOpenWithOption(
         const std::wstring &name,
         const std::wstring &pattern,
-        const std::wstring &command);
+        const std::wstring &command,
+        bool isCommandLineApp);
 
     virtual void UpdateOpenWithOption(
         int id,
         const std::wstring &name,
         const std::wstring &pattern,
-        const std::wstring &command);
+        const std::wstring &command,
+        bool isCommandLineApp);
 
     virtual void DeleteOpenWithOption(
         int id);

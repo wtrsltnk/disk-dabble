@@ -39,6 +39,12 @@ public:
 
     int Id() const { return _index; }
 
+    static std::string Convert(
+        const std::wstring &str);
+
+    static std::wstring Convert(
+        const std::string &str);
+
 protected:
     OpenDocument(
         int index,
@@ -54,12 +60,6 @@ protected:
         const std::filesystem::path &oldPath) = 0;
 
     std::string ConstructWindowID();
-
-    std::string Convert(
-        const std::wstring &str);
-
-    std::wstring Convert(
-        const std::string &str);
 
 private:
     std::filesystem::path _changeToPath;

@@ -46,8 +46,12 @@ public:
 
     void MoveSelectionToTrash();
 
+    std::function<void(const std::filesystem::path &, const std::wstring &)> ExecuteOpenWithCommand;
+    std::function<void(const std::filesystem::path &, const std::wstring &)> ExecuteRunInCommand;
+
 protected:
-    std::function<void(const std::filesystem::path &)> _onActivatePath;
+    std::function<void(const std::filesystem::path &)>
+        _onActivatePath;
     std::filesystem::path _activeSubPath;
     std::vector<struct folderItem> _itemsInFolder;
     std::vector<std::filesystem::path> _pathInSections;
@@ -76,9 +80,6 @@ protected:
     virtual void OnPathChanged(
         const std::filesystem::path &oldPath);
 
-    void ExecuteCommand(
-        const std::filesystem::path &path,
-        const std::wstring &command);
 };
 
 #endif // OPENFOLDERWIDGET_H
