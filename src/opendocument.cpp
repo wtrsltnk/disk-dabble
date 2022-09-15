@@ -71,7 +71,7 @@ std::string OpenDocument::ConstructWindowID()
     }
     wss << L"###" << _index;
 
-    return converter.to_bytes(wss.str());
+    return OpenDocument::Convert(wss.str());
 }
 
 std::string OpenDocument::Convert(

@@ -1,4 +1,6 @@
 
+CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+
 CPMAddPackage(
     NAME glfw
     GITHUB_REPOSITORY "glfw/glfw"

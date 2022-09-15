@@ -15,6 +15,7 @@ add_subdirectory(thirdparty/sqlite3)
 add_executable(disk-dabble
     include/app.hpp
     include/opendocument.h
+    include/openfindwidget.h
     include/openfolderwidget.h
     include/openimagewidget.h
     include/opentextwidget.h
@@ -24,18 +25,19 @@ add_executable(disk-dabble
     src/app.cpp
     src/glad.c
     src/opendocument.cpp
+    src/openfindwidget.cpp
     src/openfolderwidget.cpp
     src/openimagewidget.cpp
     src/opentextwidget.cpp
     src/program.cpp
     src/serviceprovider.cpp
     src/settingsservice.cpp
+    thirdparty/Davide-Pizzolato/EXIF.CPP
+    thirdparty/Davide-Pizzolato/EXIF.H
     thirdparty/ImGuiColorTextEdit/TextEditor.cpp
     thirdparty/ImGuiColorTextEdit/TextEditor.h
     thirdparty/stb/stb_image.cpp
     thirdparty/stb/stb_image.h
-    thirdparty/Davide-Pizzolato/EXIF.CPP
-    thirdparty/Davide-Pizzolato/EXIF.H
 )
 
 target_compile_features(disk-dabble
@@ -60,6 +62,7 @@ target_link_libraries(disk-dabble
         imgui
         sqlite3
         tiny-process-library
+        fmt
 )
 
 target_compile_definitions(disk-dabble

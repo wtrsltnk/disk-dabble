@@ -59,7 +59,7 @@ protected:
     virtual void OnPathChanged(
         const std::filesystem::path &oldPath) = 0;
 
-    std::string ConstructWindowID();
+    virtual std::string ConstructWindowID();
 
 private:
     std::filesystem::path _changeToPath;

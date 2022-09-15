@@ -45,6 +45,7 @@ private:
     unsigned int _dockId;
     ImFont *_monoSpaceFont = nullptr;
     ImFont *_largeFont = nullptr;
+    std::filesystem::path _lastOpenedPath;
 
     std::vector<std::unique_ptr<OpenDocument>> _openDocuments;
 

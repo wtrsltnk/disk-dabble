@@ -12,10 +12,8 @@ bool recycle_file_folder(
 
 OpenFolderWidget::OpenFolderWidget(
     int index,
-    ServiceProvider *services,
-    std::function<void(const std::filesystem::path &)> onActivatePath)
-    : OpenDocument(index, services),
-      _onActivatePath(onActivatePath)
+    ServiceProvider *services)
+    : OpenDocument(index, services)
 {
     _settingsService = services->Resolve<ISettingsService *>();
 }
@@ -300,7 +298,7 @@ void OpenFolderWidget::OnRender()
         {
             if (ImGui::MenuItem("Open"))
             {
-                _onActivatePath(dir_entry.path);
+                ActivatePath(dir_entry.path, true);
             }
 
             if (ImGui::BeginMenu("Open with..."))
@@ -394,11 +392,12 @@ void OpenFolderWidget::OnRender()
         {
             if (!isDir || ImGui::GetIO().KeyCtrl)
             {
-                _onActivatePath(dir_entry.path);
+                ActivatePath(dir_entry.path, true);
             }
             else
             {
                 Open(dir_entry.path);
+                ActivatePath(dir_entry.path, false);
             }
         }
 
@@ -764,11 +763,12 @@ void OpenFolderWidget::ActivateItem(
 
     if (!std::filesystem::is_directory(path) || ImGui::GetIO().KeyCtrl)
     {
-        _onActivatePath(path);
+        ActivatePath(path, true);
     }
     else
     {
         Open(path);
+        ActivatePath(path, false);
     }
 }
 

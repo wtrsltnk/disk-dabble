@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include <IconsMaterialDesign.h>
+#include <openfindwidget.h>
 #include <openfolderwidget.h>
 #include <openimagewidget.h>
 #include <opentextwidget.h>
@@ -199,6 +200,11 @@ void App::OnExit()
 
     for (const auto &openDoc : _openDocuments)
     {
+        if (dynamic_cast<OpenFindWidget *>(openDoc.get()) != nullptr)
+        {
+            continue;
+        }
+
         res.insert(std::make_pair(openDoc->Id(), openDoc->DocumentPath()));
     }
 
@@ -272,17 +278,23 @@ void App::ActivatePath(
     {
         auto widget = std::make_unique<OpenFolderWidget>(
             index,
-            &_services,
-            [&](const std::filesystem::path &p) {
-                this->ActivatePath(std::move(p));
-            });
+            &_services);
 
+        widget->ActivatePath = [&](const std::filesystem::path &p, bool a) {
+            _lastOpenedPath = p;
+            if (a)
+            {
+                this->ActivatePath(std::move(p));
+            }
+        };
         widget->ExecuteOpenWithCommand = ExecuteOpenWithCommand;
         widget->ExecuteRunInCommand = ExecuteRunInCommand;
 
         widget->Open(path);
 
         _queuedDocuments.push_back(std::move(widget));
+
+        _lastOpenedPath = path;
     }
     else if (OpenImageWidget::IsImage(path))
     {
@@ -344,6 +356,18 @@ void App::OnFrame()
     {
         if (!ImGui::IsPopupOpen("Save?"))
             ImGui::OpenPopup("Save?");
+    }
+
+    if (ImGui::IsKeyPressed(ImGuiKey_F3))
+    {
+        auto widget = std::make_unique<OpenFindWidget>(
+            -1,
+            &_services,
+            _monoSpaceFont);
+
+        widget->Open(_lastOpenedPath);
+
+        _queuedDocuments.push_back(std::move(widget));
     }
 
     ImGui::SetNextWindowPos(viewPort->Pos, ImGuiCond_Always);
