@@ -7,6 +7,7 @@
 #include <IconsMaterialDesign.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -133,17 +134,43 @@ bool App::Init()
 
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
-    io.Fonts->AddFontFromFileTTF("fonts/Poppins-Regular.ttf", 18.0f);
+    if (std::filesystem::exists(".\\fonts\\Poppins-Regular.ttf"))
+    {
+        io.Fonts->AddFontFromFileTTF(".\\fonts\\Poppins-Regular.ttf", 18.0f);
+    }
+    else
+    {
+        io.Fonts->AddFontFromFileTTF("c:\\windows\\fonts\\tahoma.ttf", 18.0f);
+    }
 
     ImFontConfig config;
     config.MergeMode = true;
     config.GlyphOffset = ImVec2(0, 4.0f);
     config.GlyphMinAdvanceX = 18.0f; // Use if you want to make the icon monospaced
-    static const ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
-    io.Fonts->AddFontFromFileTTF("fonts/MaterialIcons-Regular.ttf", 18.0f, &config, icon_ranges);
 
-    _monoSpaceFont = io.Fonts->AddFontFromFileTTF("fonts/SourceCodePro-Regular.ttf", 18.0f);
-    _largeFont = io.Fonts->AddFontFromFileTTF("fonts/Poppins-Regular.ttf", 28.0f);
+    if (std::filesystem::exists(".\\fonts\\MaterialIcons-Regular.ttf"))
+    {
+        static const ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
+        io.Fonts->AddFontFromFileTTF(".\\fonts\\MaterialIcons-Regular.ttf", 18.0f, &config, icon_ranges);
+    }
+
+    if (std::filesystem::exists("fonts/SourceCodePro-Regular.ttf"))
+    {
+        _monoSpaceFont = io.Fonts->AddFontFromFileTTF("fonts/SourceCodePro-Regular.ttf", 18.0f);
+    }
+    else
+    {
+        _monoSpaceFont = io.Fonts->AddFontFromFileTTF("c:\\windows\\fonts\\consola.ttf", 18.0f);
+    }
+
+    if (std::filesystem::exists(".\\fonts\\Poppins-Regular.ttf"))
+    {
+        _largeFont = io.Fonts->AddFontFromFileTTF("fonts/Poppins-Regular.ttf", 28.0f);
+    }
+    else
+    {
+        _largeFont = io.Fonts->AddFontFromFileTTF("c:\\windows\\fonts\\tahoma.ttf", 28.0f);
+    }
 
     // Setup Dear ImGui style
     //    ImGui::StyleColorsDark();
