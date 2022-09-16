@@ -50,11 +50,12 @@ struct ExampleAppLog
 
     void StartProcess(
         const std::wstring &command,
-        const std::wstring &path)
+        const std::wstring &path,
+        std::function<void()> done)
     {
         FinishThread();
 
-        t1 = std::make_unique<std::thread>([this, command, path]() {
+        t1 = std::make_unique<std::thread>([this, command, path, done]() {
             this->exit_status = nullptr;
 
             TinyProcessLib::Process process1(command.c_str(), path.c_str(), [this](const char *bytes, size_t n) {
@@ -62,6 +63,8 @@ struct ExampleAppLog
             });
 
             this->exit_status = std::make_unique<int>();
+
+            done();
         });
     }
 
@@ -236,16 +239,20 @@ std::wstring PatchCommand(
 {
     std::wstring patchedCommand = command;
 
-    replace(patchedCommand, L"$fullpath", path.wstring());
-    replace(patchedCommand, L"$parentpath", path.parent_path().wstring());
-    replace(patchedCommand, L"$filename", path.filename().wstring());
+    if (!path.empty())
+    {
+        replace(patchedCommand, L"$fullpath", path.wstring());
+        replace(patchedCommand, L"$parentpath", path.parent_path().wstring());
+        replace(patchedCommand, L"$filename", path.filename().wstring());
+    }
 
     return patchedCommand;
 }
 
 void ExecuteRunInCommand(
     const std::filesystem::path &path,
-    const std::wstring &command)
+    const std::wstring &command,
+    std::function<void()> done)
 {
     std::wstring patchedCommand = PatchCommand(path, command);
 
@@ -256,7 +263,7 @@ void ExecuteRunInCommand(
     std::wstringstream wss;
     wss << L"cmd /C " << patchedCommand;
 
-    AppLog.StartProcess(wss.str(), L"");
+    AppLog.StartProcess(wss.str(), L"", done);
 }
 
 void ExecuteOpenWithCommand(
@@ -314,7 +321,7 @@ void App::ActivatePath(
     }
     else if (path.extension() == L".exe" || path.extension() == L".bat" || path.extension() == L".cmd")
     {
-        ExecuteRunInCommand(path, L"start $fullpath");
+        ExecuteRunInCommand(path, L"start $fullpath", []() {});
     }
     else
     {
@@ -413,15 +420,6 @@ void App::OnFrame()
             {
                 ImGui::CloseCurrentPopup();
             }
-        }
-
-        if (ImGui::Button("Check TCC version", buttonSize))
-        {
-            AppLog.AddLog("Starting ping:\n\n");
-
-            AppLog.StartProcess(L"cmd /C ping www.saaltink.net", L"");
-
-            ImGui::CloseCurrentPopup();
         }
 
         if (ImGui::Button("Open current working directory", buttonSize))

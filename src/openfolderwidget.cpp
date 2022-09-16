@@ -98,6 +98,168 @@ inline bool ends_with(
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
+void OpenFolderWidget::RenderPathItemContextMenu(
+    const std::filesystem::path &file)
+{
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (ImGui::MenuItem("Open"))
+        {
+            ActivatePath(file, true);
+        }
+
+        if (ImGui::BeginMenu("Open with..."))
+        {
+            auto openWithOptions = _settingsService->GetOpenWithOptions(file);
+
+            for (const auto &openWithOption : openWithOptions)
+            {
+                ImGui::PushID(openWithOption.id);
+                if (ImGui::MenuItem(Convert(openWithOption.name).c_str()))
+                {
+                    if (openWithOption.isCommandLineApp)
+                    {
+                        ExecuteRunInCommand(file, openWithOption.command, [this]() { Refresh(); });
+                    }
+                    else
+                    {
+                        ExecuteOpenWithCommand(file, openWithOption.command);
+                    }
+                }
+                ImGui::PopID();
+            }
+
+            if (!openWithOptions.empty())
+            {
+                ImGui::Separator();
+            }
+
+            if (ImGui::MenuItem("Manage all options..."))
+            {
+                _showManageOpenWithOptionsPopup = true;
+            }
+            ImGui::EndMenu();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Copy"))
+        {
+            _pathsToMove.clear();
+            _pathsToCopy.clear();
+            _pathsToCopy.push_back(file);
+        }
+
+        if (ImGui::MenuItem("Cut"))
+        {
+            _pathsToMove.clear();
+            _pathsToCopy.clear();
+            _pathsToMove.push_back(file);
+        }
+
+        if (ImGui::MenuItem("Paste"))
+        {
+            if (!_pathsToCopy.empty())
+            {
+                Paste(_pathsToCopy, false);
+            }
+            else if (!_pathsToMove.empty())
+            {
+                Paste(_pathsToMove, true);
+            }
+        }
+
+#ifdef _WIN32
+        if (ImGui::MenuItem("Move to trash"))
+        {
+            _showMoveToTrashPopup = true;
+        }
+#endif
+        if (ImGui::MenuItem("Delete"))
+        {
+            _showDeletePopup = true;
+        }
+
+        if (std::filesystem::is_directory(file))
+        {
+            ImGui::Separator();
+
+            auto bookmarked = _settingsService->IsBookmarked(file);
+            if (!bookmarked)
+            {
+                if (ImGui::MenuItem("Bookmark"))
+                {
+                    _settingsService->SetBookmarked(file, true);
+                }
+            }
+            else
+            {
+                if (ImGui::MenuItem("Unbookmark"))
+                {
+                    _settingsService->SetBookmarked(file, false);
+                }
+            }
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Properties"))
+        {}
+
+        ImGui::EndPopup();
+    }
+}
+
+void OpenFolderWidget::Paste(
+    const std::vector<std::filesystem::path> &paths,
+    bool move)
+{
+    if (!paths.empty() && std::filesystem::is_directory(_activeSubPath))
+    {
+        std::vector<std::filesystem::path> files;
+        for (const auto &path : paths)
+        {
+            if (std::filesystem::is_directory(path))
+            {
+                std::wstringstream ss;
+
+                ss << L"robocopy \"" << path.wstring() << L"\" \"" << (_activeSubPath / path.filename()).wstring() << "\" /e /z";
+
+                     //                if (move)
+                     //                {
+                     //                    ss << L" /move";
+                     //                }
+
+                ExecuteRunInCommand("", ss.str(), [this]() { Refresh(); });
+            }
+            else
+            {
+                files.push_back(path);
+            }
+        }
+
+        if (!files.empty())
+        {
+            std::wstringstream ss;
+            ss << L"robocopy \"" << files.front().parent_path().wstring() << L"\" \"" << _activeSubPath.wstring() << "\"";
+
+            for (const auto &file : files)
+            {
+                ss << " \"" << file.filename().wstring() << L"\"";
+            }
+
+            ss << " /e /z";
+
+                 //            if (move)
+                 //            {
+                 //                ss << L" /move";
+                 //            }
+
+            ExecuteRunInCommand("", ss.str(), [this]() { Refresh(); });
+        }
+    }
+}
+
 void OpenFolderWidget::OnRender()
 {
     if (_documentPath.empty())
@@ -294,99 +456,7 @@ void OpenFolderWidget::OnRender()
             isSelected = ImGui::Selectable(ICON_MD_DESCRIPTION, _activeSubPath == dir_entry.path);
         }
 
-        if (!_activeSubPath.empty() && ImGui::BeginPopupContextItem())
-        {
-            if (ImGui::MenuItem("Open"))
-            {
-                ActivatePath(dir_entry.path, true);
-            }
-
-            if (ImGui::BeginMenu("Open with..."))
-            {
-                auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath);
-
-                for (const auto &openWithOption : openWithOptions)
-                {
-                    ImGui::PushID(openWithOption.id);
-                    if (ImGui::MenuItem(Convert(openWithOption.name).c_str()))
-                    {
-                        if (openWithOption.isCommandLineApp)
-                        {
-                            ExecuteRunInCommand(_activeSubPath, openWithOption.command);
-                        }
-                        else
-                        {
-                            ExecuteOpenWithCommand(_activeSubPath, openWithOption.command);
-                        }
-                    }
-                    ImGui::PopID();
-                }
-
-                if (!openWithOptions.empty())
-                {
-                    ImGui::Separator();
-                }
-
-                if (ImGui::MenuItem("Manage all options..."))
-                {
-                    _showManageOpenWithOptionsPopup = true;
-                }
-                ImGui::EndMenu();
-            }
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Copy"))
-            {
-            }
-
-            if (ImGui::MenuItem("Cut"))
-            {
-            }
-
-            if (ImGui::MenuItem("Paste"))
-            {
-            }
-
-#ifdef _WIN32
-            if (ImGui::MenuItem("Move to trash"))
-            {
-                _showMoveToTrashPopup = true;
-            }
-#endif
-            if (ImGui::MenuItem("Delete"))
-            {
-                _showDeletePopup = true;
-            }
-
-            if (isDir)
-            {
-                ImGui::Separator();
-
-                auto bookmarked = _settingsService->IsBookmarked(dir_entry.path);
-                if (!bookmarked)
-                {
-                    if (ImGui::MenuItem("Bookmark"))
-                    {
-                        _settingsService->SetBookmarked(dir_entry.path, true);
-                    }
-                }
-                else
-                {
-                    if (ImGui::MenuItem("Unbookmark"))
-                    {
-                        _settingsService->SetBookmarked(dir_entry.path, false);
-                    }
-                }
-            }
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Properties"))
-            {}
-
-            ImGui::EndPopup();
-        }
+        RenderPathItemContextMenu(dir_entry.path);
 
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
@@ -518,7 +588,7 @@ void OpenFolderWidget::OnRender()
         ImGui::Columns(2, "mycolumns");
         ImGui::SetColumnWidth(0, 200.0f);
 
-        if (ImGui::BeginListBox("##listbox 2", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+        if (ImGui::BeginListBox("##listbox 2", ImVec2(-FLT_MIN, 15 * ImGui::GetTextLineHeightWithSpacing())))
         {
             auto openWithOptions = _settingsService->GetOpenWithOptions(_activeSubPath.wstring());
 
