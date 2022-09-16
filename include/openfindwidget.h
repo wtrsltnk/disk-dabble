@@ -17,6 +17,7 @@ public:
         ServiceProvider *services,
         ImFont *monoSpaceFon);
 
+    std::function<void(const std::filesystem::path &, bool)> ActivatePath;
 protected:
     ImFont *_monoSpaceFont;
     TextEditor _textEditor;

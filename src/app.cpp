@@ -282,6 +282,12 @@ void App::ActivatePath(
 
         widget->ActivatePath = [&](const std::filesystem::path &p, bool a) {
             _lastOpenedPath = p;
+
+            if (std::filesystem::is_directory(p))
+            {
+                _lastOpenedDirectoryPath = p;
+            }
+
             if (a)
             {
                 this->ActivatePath(std::move(p));
@@ -360,14 +366,31 @@ void App::OnFrame()
 
     if (ImGui::IsKeyPressed(ImGuiKey_F3))
     {
-        auto widget = std::make_unique<OpenFindWidget>(
-            -1,
-            &_services,
-            _monoSpaceFont);
+        if (!_lastOpenedDirectoryPath.empty())
+        {
+            auto widget = std::make_unique<OpenFindWidget>(
+                -1,
+                &_services,
+                _monoSpaceFont);
 
-        widget->Open(_lastOpenedPath);
+            widget->ActivatePath = [&](const std::filesystem::path &p, bool a) {
+                _lastOpenedPath = p;
 
-        _queuedDocuments.push_back(std::move(widget));
+                if (std::filesystem::is_directory(p))
+                {
+                    _lastOpenedDirectoryPath = p;
+                }
+
+                if (a)
+                {
+                    this->ActivatePath(std::move(p));
+                }
+            };
+
+            widget->Open(_lastOpenedDirectoryPath);
+
+            _queuedDocuments.push_back(std::move(widget));
+        }
     }
 
     ImGui::SetNextWindowPos(viewPort->Pos, ImGuiCond_Always);

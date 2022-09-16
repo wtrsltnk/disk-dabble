@@ -34,6 +34,7 @@ std::string OpenFindWidget::ConstructWindowID()
     return OpenDocument::Convert(wss.str());
 }
 
+#include <iostream>
 void OpenFindWidget::OnRender()
 {
     _linesToAddMutex.lock();
@@ -61,7 +62,53 @@ void OpenFindWidget::OnRender()
         });
     }
 
-    ImGui::InputTextMultiline("##SearchResults", content.data(), content.size(), ImGui::GetContentRegionAvail());
+    static std::string selection;
+    struct Funcs
+    {
+        static int MyCallback(ImGuiInputTextCallbackData *data)
+        {
+            std::string &content = *(std::string *)data->UserData;
+
+            size_t lineStart = data->SelectionStart;
+            while (lineStart > 0 && content[lineStart] != '\n')
+            {
+                --lineStart;
+            }
+            ++lineStart; // skip the \n we found
+
+            size_t lineEnd = data->SelectionStart;
+            while (lineEnd < content.size() && content[lineEnd] != '\n')
+            {
+                ++lineEnd;
+            }
+
+            selection = content.substr(lineStart, lineEnd - lineStart);
+
+            if (selection.size() == 0)
+            {
+                return 0;
+            }
+
+            return 0;
+        }
+    };
+
+    ImGui::InputTextMultiline(
+        "##SearchResults",
+        content.data(),
+        content.size(),
+        ImGui::GetContentRegionAvail(),
+        ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_CallbackAlways,
+        Funcs::MyCallback,
+        (void *)&content);
+
+    if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        if (selection[0] != ' ' && std::filesystem::exists(selection))
+        {
+            ActivatePath(selection, true);
+        }
+    }
 
     ImGui::PopFont();
 
@@ -121,7 +168,7 @@ void OpenFindWidget::RecursiveFind(
                 hitCount++;
                 if (!fileHasResults)
                 {
-                    AddLine(fmt::format("{}:", dir_entry.path().string()));
+                    AddLine(dir_entry.path().string());
                 }
                 AddLine(fmt::format(" {:>5} {}", curLine, line));
                 fileHasResults = true;

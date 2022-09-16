@@ -46,6 +46,7 @@ private:
     ImFont *_monoSpaceFont = nullptr;
     ImFont *_largeFont = nullptr;
     std::filesystem::path _lastOpenedPath;
+    std::filesystem::path _lastOpenedDirectoryPath;
 
     std::vector<std::unique_ptr<OpenDocument>> _openDocuments;
 
