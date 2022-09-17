@@ -4,6 +4,7 @@
 #include "opendocument.h"
 #include <filesystem>
 #include <functional>
+#include <set>
 #include <settingsservice.h>
 
 struct folderItem
@@ -17,12 +18,20 @@ class SelectionState
 {
 public:
     std::filesystem::path activePath;
-    std::vector<std::filesystem::path> selectedPaths;
+    std::set<std::filesystem::path> selectedPaths;
 
     void Clear();
 
     void SetSelection(
         const std::filesystem::path &path);
+
+    void AddToSelection(
+        const std::filesystem::path &path);
+
+    bool IsSelected(
+        const std::filesystem::path &path);
+
+    void ToggleActivePathSelection();
 };
 
 class OpenFolderWidget : public OpenDocument
@@ -95,7 +104,8 @@ protected:
 
     void RenderOpenWithoptionsDialog();
 
-    void Refresh();
+    void Refresh(
+        const std::filesystem::path &oldPath = std::filesystem::path());
 
     void Paste(
         const std::vector<std::filesystem::path> &files,

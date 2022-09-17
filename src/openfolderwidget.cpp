@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-// Find implementations at teh end of this file
+// Find implementations at the end of this file
 bool recycle_file_folder(
     std::wstring path);
 
@@ -19,8 +19,50 @@ void SelectionState::Clear()
 void SelectionState::SetSelection(
     const std::filesystem::path &path)
 {
+    Clear();
     activePath = path;
-    selectedPaths.push_back(path);
+    selectedPaths.insert(path);
+}
+
+void SelectionState::AddToSelection(
+    const std::filesystem::path &path)
+{
+    activePath = path;
+    selectedPaths.insert(path);
+}
+
+bool SelectionState::IsSelected(
+    const std::filesystem::path &path)
+{
+    //    if (activePath == path)
+    //    {
+    //        return true;
+    //    }
+
+    for (const auto &p : selectedPaths)
+    {
+        if (p == path)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SelectionState::ToggleActivePathSelection()
+{
+    for (const auto &p : selectedPaths)
+    {
+        if (p == activePath)
+        {
+            selectedPaths.erase(p);
+
+            return;
+        }
+    }
+
+    selectedPaths.insert(activePath);
 }
 
 OpenFolderWidget::OpenFolderWidget(
@@ -43,7 +85,8 @@ bool folderFirst(
     return a.isDir > b.isDir;
 }
 
-void OpenFolderWidget::Refresh()
+void OpenFolderWidget::Refresh(
+    const std::filesystem::path &oldPath)
 {
     _currentSelection.Clear();
     _showFind = false;
@@ -59,6 +102,11 @@ void OpenFolderWidget::Refresh()
             dir_entry.path().filename().wstring(),
             std::filesystem::is_directory(dir_entry),
         });
+
+        if (oldPath == dir_entry.path())
+        {
+            _currentSelection.SetSelection(dir_entry.path());
+        }
 
         _itemsInFolder.push_back(item);
     }
@@ -96,7 +144,7 @@ void OpenFolderWidget::OnPathChanged(
     }
     _pathChangeIsTravel = false;
 
-    Refresh();
+    Refresh(oldPath);
 }
 
 inline bool ends_with(
@@ -337,6 +385,10 @@ void OpenFolderWidget::OnRender()
             {
                 Open(_documentPath.parent_path());
             }
+            else if (ImGui::IsKeyPressed(ImGuiKey_Space) && ImGui::GetIO().KeyShift)
+            {
+                _currentSelection.ToggleActivePathSelection();
+            }
             else if (ImGui::IsKeyPressed(ImGuiKey_End))
             {
                 MoveSelectionToEnd();
@@ -437,14 +489,17 @@ void OpenFolderWidget::OnRender()
         auto entryName = dir_entry.name;
         auto isDir = std::filesystem::is_directory(dir_entry.path);
 
-        bool isSelected = false;
+        auto selectableMin = ImGui::GetCursorScreenPos();
+        auto selectableWidth = ImGui::GetContentRegionAvail().x;
+
+        bool isSelected = _currentSelection.IsSelected(dir_entry.path);
         if (isDir)
         {
-            isSelected = ImGui::Selectable(ICON_MD_FOLDER, _currentSelection.activePath == dir_entry.path);
+            isSelected = ImGui::Selectable(ICON_MD_FOLDER, isSelected);
         }
         else
         {
-            isSelected = ImGui::Selectable(ICON_MD_DESCRIPTION, _currentSelection.activePath == dir_entry.path);
+            isSelected = ImGui::Selectable(ICON_MD_DESCRIPTION, isSelected);
         }
 
         RenderPathItemContextMenu(dir_entry.path);
@@ -468,7 +523,24 @@ void OpenFolderWidget::OnRender()
         }
 
         ImGui::SameLine();
+        if (dir_entry.path == _currentSelection.activePath)
+        {
+            ImGui::GetForegroundDrawList()->AddRect(
+                ImVec2(
+                    selectableMin.x,
+                    selectableMin.y - ImGui::GetStyle().ItemSpacing.y / 2),
+                ImVec2(
+                    selectableMin.x + selectableWidth,
+                    selectableMin.y + ImGui::GetTextLineHeight() + ImGui::GetStyle().ItemSpacing.y / 2),
+                IM_COL32(0, 20, 50, 255));
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 20, 50, 255));
+        }
         ImGui::Text("%s", Convert(entryName).c_str());
+
+        if (dir_entry.path == _currentSelection.activePath)
+        {
+            ImGui::PopStyleColor();
+        }
 
         ImGui::PopID();
     }
@@ -701,7 +773,14 @@ void OpenFolderWidget::MoveSelectionUp(
     {
         --found;
 
-        _currentSelection.SetSelection(found->path);
+        if (ImGui::GetIO().KeyShift)
+        {
+            _currentSelection.AddToSelection(found->path);
+        }
+        else
+        {
+            _currentSelection.SetSelection(found->path);
+        }
 
         if (found == _itemsInFolder.begin())
         {
@@ -746,7 +825,14 @@ void OpenFolderWidget::MoveSelectionDown(
             break;
         }
 
-        _currentSelection.SetSelection(found->path);
+        if (ImGui::GetIO().KeyShift)
+        {
+            _currentSelection.AddToSelection(found->path);
+        }
+        else
+        {
+            _currentSelection.SetSelection(found->path);
+        }
     }
 }
 
@@ -757,7 +843,7 @@ void OpenFolderWidget::MoveSelectionToEnd()
         return;
     }
 
-    _currentSelection.SetSelection(_itemsInFolder.back().path);
+    MoveSelectionDown(_itemsInFolder.size());
 }
 
 void OpenFolderWidget::MoveSelectionToStart()
@@ -767,7 +853,7 @@ void OpenFolderWidget::MoveSelectionToStart()
         return;
     }
 
-    _currentSelection.SetSelection(_itemsInFolder.front().path);
+    MoveSelectionUp(_itemsInFolder.size());
 }
 
 void OpenFolderWidget::DeleteSelection()
