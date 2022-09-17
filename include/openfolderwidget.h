@@ -13,6 +13,18 @@ struct folderItem
     bool isDir;
 };
 
+class SelectionState
+{
+public:
+    std::filesystem::path activePath;
+    std::vector<std::filesystem::path> selectedPaths;
+
+    void Clear();
+
+    void SetSelection(
+        const std::filesystem::path &path);
+};
+
 class OpenFolderWidget : public OpenDocument
 {
 public:
@@ -41,6 +53,8 @@ public:
 
     void ToggleShowInfo();
 
+    void ToggleBookmark();
+
     void DeleteSelection();
 
     void MoveSelectionToTrash();
@@ -50,7 +64,7 @@ public:
     std::function<void(const std::filesystem::path &, const std::wstring &, std::function<void()> done)> ExecuteRunInCommand;
 
 protected:
-    std::filesystem::path _activeSubPath;
+    SelectionState _currentSelection;
     std::vector<struct folderItem> _itemsInFolder;
     std::vector<std::filesystem::path> _pathInSections;
     bool _isBookmark = false;
@@ -77,7 +91,9 @@ protected:
     virtual void OnRender();
 
     void RenderPathItemContextMenu(
-        const std::filesystem::path&file);
+        const std::filesystem::path &file);
+
+    void RenderOpenWithoptionsDialog();
 
     void Refresh();
 

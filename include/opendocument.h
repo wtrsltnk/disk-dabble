@@ -45,6 +45,17 @@ public:
     static std::wstring Convert(
         const std::string &str);
 
+    static void RenderButton(
+        const char *text,
+        bool disabled,
+        std::function<void()> action);
+
+    static void RenderYesNoDialog(
+        bool &show,
+        const std::wstring &caption,
+        const std::wstring &text,
+        std::function<void()> actionOnYes);
+
 protected:
     OpenDocument(
         int index,

@@ -29,13 +29,13 @@ add_executable(disk-dabble
     src/openfolderwidget.cpp
     src/openimagewidget.cpp
     src/opentextwidget.cpp
+    src/pagesdocument.cpp
+    src/pagesdocument.h
     src/program.cpp
     src/serviceprovider.cpp
     src/settingsservice.cpp
     thirdparty/Davide-Pizzolato/EXIF.CPP
     thirdparty/Davide-Pizzolato/EXIF.H
-    thirdparty/ImGuiColorTextEdit/TextEditor.cpp
-    thirdparty/ImGuiColorTextEdit/TextEditor.h
     thirdparty/stb/stb_image.cpp
     thirdparty/stb/stb_image.h
 )
@@ -49,7 +49,6 @@ target_compile_features(disk-dabble
 target_include_directories(disk-dabble
     PRIVATE
         "include"
-        "thirdparty/ImGuiColorTextEdit"
         "thirdparty/stb"
         "thirdparty/sqlite3/include"
         "thirdparty/Davide-Pizzolato"
@@ -63,6 +62,8 @@ target_link_libraries(disk-dabble
         sqlite3
         tiny-process-library
         fmt
+        tinyxml2
+        miniz
 )
 
 target_compile_definitions(disk-dabble

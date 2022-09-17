@@ -272,7 +272,7 @@ void ExecuteOpenWithCommand(
 {
     std::wstring patchedCommand = PatchCommand(path, command);
 
-    std::wcout << L"Opening file with:" << patchedCommand << std::endl;
+    std::wcout << L"Opening file with: " << patchedCommand << std::endl;
 
     system(OpenDocument::Convert(patchedCommand).c_str());
 }

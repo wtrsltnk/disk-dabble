@@ -1,5 +1,7 @@
 
 CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+CPMAddPackage("gh:leethomason/tinyxml2#9.0.0")
+CPMAddPackage("gh:richgel999/miniz#2.2.0")
 
 CPMAddPackage(
     NAME glfw

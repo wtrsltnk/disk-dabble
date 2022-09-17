@@ -2,7 +2,6 @@
 #define OPENTEXTWIDGET_H
 
 #include "opendocument.h"
-#include <TextEditor.h>
 #include <filesystem>
 #include <imgui.h>
 
@@ -14,9 +13,14 @@ public:
         ServiceProvider *services,
         ImFont *monoSpaceFont);
 
+    void SaveFile();
+
+    void SaveFileAs();
+
 private:
     ImFont *_monoSpaceFont;
-    TextEditor _textEditor;
+    ImVector<char> _content;
+    bool _isDirty = false;
 
     virtual void OnRender();
 

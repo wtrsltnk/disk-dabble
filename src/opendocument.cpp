@@ -85,3 +85,51 @@ std::wstring OpenDocument::Convert(
 {
     return converter.from_bytes(str);
 }
+
+void OpenDocument::RenderButton(
+    const char *text,
+    bool disabled,
+    std::function<void()> action)
+{
+    StyleGuard style;
+    if (disabled)
+    {
+        style.Push(ImGuiCol_Text, IM_COL32(0, 0, 0, 55));
+    }
+    if (ImGui::Button(text))
+    {
+        action();
+    }
+}
+
+void OpenDocument::RenderYesNoDialog(
+    bool &show,
+    const std::wstring &caption,
+    const std::wstring &text,
+    std::function<void()> actionOnYes)
+{
+    if (show)
+    {
+        ImGui::OpenPopup(Convert(caption).c_str());
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(250, 120));
+    if (ImGui::BeginPopupModal(Convert(caption).c_str(), &show))
+    {
+        ImGui::Text("%s", Convert(text).c_str());
+        if (ImGui::Button("Yes"))
+        {
+            show = false;
+            actionOnYes();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("No"))
+        {
+            show = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}

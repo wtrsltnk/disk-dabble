@@ -2,12 +2,11 @@
 #define OPENFINDWIDGET_H
 
 #include "opendocument.h"
-#include <TextEditor.h>
 #include <imgui.h>
 #include <memory>
 #include <mutex>
-#include <thread>
 #include <sstream>
+#include <thread>
 
 class OpenFindWidget : public OpenDocument
 {
@@ -18,9 +17,9 @@ public:
         ImFont *monoSpaceFon);
 
     std::function<void(const std::filesystem::path &, bool)> ActivatePath;
+
 protected:
     ImFont *_monoSpaceFont;
-    TextEditor _textEditor;
 
     virtual void OnRender();
 
@@ -34,6 +33,7 @@ private:
     std::unique_ptr<std::thread> t1;
     std::mutex _linesToAddMutex;
     std::stringstream _content;
+    bool _justChangedPath = false;
 
     void AddLine(
         const std::string &line);

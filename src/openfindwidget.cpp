@@ -15,7 +15,9 @@ OpenFindWidget::OpenFindWidget(
 
 void OpenFindWidget::OnPathChanged(
     const std::filesystem::path &oldPath)
-{}
+{
+    _justChangedPath = true;
+}
 
 std::string OpenFindWidget::ConstructWindowID()
 {
@@ -34,7 +36,6 @@ std::string OpenFindWidget::ConstructWindowID()
     return OpenDocument::Convert(wss.str());
 }
 
-#include <iostream>
 void OpenFindWidget::OnRender()
 {
     _linesToAddMutex.lock();
@@ -47,6 +48,11 @@ void OpenFindWidget::OnRender()
 
     ImGui::Text("Find in files from: %s", Convert(_documentPath).c_str());
 
+    if (_justChangedPath)
+    {
+        _justChangedPath = false;
+        ImGui::SetKeyboardFocusHere(0);
+    }
     ImGui::InputText("###searchFor", _buf, 256);
 
     ImGui::SameLine();
