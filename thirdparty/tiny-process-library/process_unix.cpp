@@ -248,11 +248,27 @@ void Process::async_read() noexcept {
                 read_stderr(buffer.get(), static_cast<size_t>(n));
             }
             else if(n < 0 && errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
+              if(fd_is_stdout[i]) {
+                if(config.on_stdout_close)
+                  config.on_stdout_close();
+              }
+              else {
+                if(config.on_stderr_close)
+                  config.on_stderr_close();
+              }
               pollfds[i].fd = -1;
               continue;
             }
           }
           if(pollfds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+            if(fd_is_stdout[i]) {
+              if(config.on_stdout_close)
+                config.on_stdout_close();
+            }
+            else {
+              if(config.on_stderr_close)
+                config.on_stderr_close();
+            }
             pollfds[i].fd = -1;
             continue;
           }
@@ -347,12 +363,18 @@ bool Process::write(const char *bytes, size_t n) {
 
   std::lock_guard<std::mutex> lock(stdin_mutex);
   if(stdin_fd) {
-    if(::write(*stdin_fd, bytes, n) >= 0) {
-      return true;
+    while(n != 0) {
+      const ssize_t ret = ::write(*stdin_fd, bytes, n);
+      if(ret < 0) {
+        if(errno == EINTR)
+          continue;
+        else
+          return false;
+      }
+      bytes += static_cast<size_t>(ret);
+      n -= static_cast<size_t>(ret);
     }
-    else {
-      return false;
-    }
+    return true;
   }
   return false;
 }
@@ -369,10 +391,14 @@ void Process::close_stdin() noexcept {
 void Process::kill(bool force) noexcept {
   std::lock_guard<std::mutex> lock(close_mutex);
   if(data.id > 0 && !closed) {
-    if(force)
+    if(force) {
       ::kill(-data.id, SIGTERM);
-    else
+      ::kill(data.id, SIGTERM); // Based on comment in https://gitlab.com/eidheim/tiny-process-library/-/merge_requests/29#note_1146144166
+    }
+    else {
       ::kill(-data.id, SIGINT);
+      ::kill(data.id, SIGINT);
+    }
   }
 }
 
@@ -380,16 +406,21 @@ void Process::kill(id_type id, bool force) noexcept {
   if(id <= 0)
     return;
 
-  if(force)
+  if(force) {
     ::kill(-id, SIGTERM);
-  else
+    ::kill(id, SIGTERM);
+  }
+  else {
     ::kill(-id, SIGINT);
+    ::kill(id, SIGINT);
+  }
 }
 
 void Process::signal(int signum) noexcept {
   std::lock_guard<std::mutex> lock(close_mutex);
   if(data.id > 0 && !closed) {
     ::kill(-data.id, signum);
+    ::kill(data.id, signum);
   }
 }
 

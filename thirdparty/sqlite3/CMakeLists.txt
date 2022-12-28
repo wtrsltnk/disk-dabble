@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(sqlite3 VERSION "5.2.2")
 
-add_library(sqlite3)
+add_library(sqlite3 STATIC)
 
 target_compile_features(sqlite3
     PRIVATE

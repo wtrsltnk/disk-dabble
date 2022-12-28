@@ -1,7 +1,18 @@
 
-CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+CPMAddPackage(
+    NAME fmt
+    GITHUB_REPOSITORY "fmtlib/fmt"
+    GIT_TAG 7.1.3
+)
+
 CPMAddPackage("gh:leethomason/tinyxml2#9.0.0")
-CPMAddPackage("gh:richgel999/miniz#2.2.0")
+CPMAddPackage(
+    NAME miniz
+    GITHUB_REPOSITORY "richgel999/miniz"
+    GIT_TAG 2.2.0
+    OPTIONS
+        "BUILD_SHARED_LIBS Off"
+)
 
 CPMAddPackage(
     NAME glfw
@@ -9,6 +20,7 @@ CPMAddPackage(
     GIT_TAG 3.3.8
     GIT_SHALLOW ON
     OPTIONS
+        "BUILD_SHARED_LIBS Off"
         "GLFW_BUILD_EXAMPLES Off"
         "GLFW_BUILD_TESTS Off"
         "GLFW_BUILD_DOCS Off"
@@ -23,7 +35,8 @@ CPMAddPackage(
 )
 
 if (imgui_ADDED)
-    add_library(imgui
+    message(STATUS "Adding IMGui: ${imgui_SOURCE_DIR}")
+    add_library(imgui STATIC
         "${imgui_SOURCE_DIR}/imgui.cpp"
         "${imgui_SOURCE_DIR}/imgui_demo.cpp"
         "${imgui_SOURCE_DIR}/imgui_draw.cpp"

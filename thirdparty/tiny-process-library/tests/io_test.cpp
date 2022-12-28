@@ -1,4 +1,5 @@
 #include "process.hpp"
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <fstream>
@@ -11,6 +12,7 @@ using namespace TinyProcessLib;
 int main() {
   auto output = make_shared<string>();
   auto error = make_shared<string>();
+  auto eof = make_shared<std::atomic<int>>(0);
   {
     Process process("echo Test", "", [output](const char *bytes, size_t n) {
       *output += string(bytes, n);
@@ -78,6 +80,14 @@ int main() {
   }
 
   {
+    Process process("while true; do sleep 10000; done");
+    int exit_status;
+    assert(!process.try_get_exit_status(exit_status));
+    process.kill();
+    assert(process.get_exit_status() != 0);
+  }
+
+  {
     Process process(
         [] {
           cout << "Test" << endl;
@@ -115,6 +125,66 @@ int main() {
     assert(!error->empty());
     output->clear();
     error->clear();
+  }
+
+  {
+    Config config;
+    config.on_stdout_close = [eof]() {
+      ++*eof;
+    };
+    Process process(
+        std::vector<string>{"/bin/echo", "Test"}, "", [output](const char *bytes, size_t n) {
+          *output += string(bytes, n);
+        },
+        nullptr, false, config);
+    assert(process.get_exit_status() == 0);
+    assert(output->substr(0, 4) == "Test");
+    assert(*eof == 1);
+    output->clear();
+    *eof = 0;
+  }
+
+  {
+    Config config;
+    config.on_stderr_close = [eof]() {
+      ++*eof;
+    };
+    Process process(
+        "ls an_incorrect_path", "", nullptr, [error](const char *bytes, size_t n) {
+          *error += string(bytes, n);
+        },
+        false, config);
+    assert(process.get_exit_status() > 0);
+    assert(!error->empty());
+    assert(*eof == 1);
+    error->clear();
+    *eof = 0;
+  }
+
+  {
+    Config config;
+    config.on_stdout_close = [eof]() {
+      ++*eof;
+    };
+    config.on_stderr_close = [eof]() {
+      ++*eof;
+    };
+    Process process(
+        "echo Test && ls an_incorrect_path", "",
+        [output](const char *bytes, size_t n) {
+          *output += string(bytes, n);
+        },
+        [error](const char *bytes, size_t n) {
+          *error += string(bytes, n);
+        },
+        false, config);
+    assert(process.get_exit_status() > 0);
+    assert(output->substr(0, 4) == "Test");
+    assert(!error->empty());
+    assert(*eof == 2);
+    output->clear();
+    error->clear();
+    *eof = 0;
   }
 
   {

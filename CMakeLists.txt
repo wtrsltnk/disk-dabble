@@ -8,7 +8,6 @@ include(cmake/Dependencies.cmake)
 configure_file(config.h.in config.h)
 
 add_compile_definitions(UNICODE _UNICODE _UNICODE_)
-add_subdirectory(thirdparty/tiny-process-library)
 
 add_subdirectory(thirdparty/sqlite3)
 
@@ -38,7 +37,19 @@ add_executable(disk-dabble
     thirdparty/Davide-Pizzolato/EXIF.H
     thirdparty/stb/stb_image.cpp
     thirdparty/stb/stb_image.h
+    thirdparty/tiny-process-library/process.cpp
+
 )
+
+if(WIN32)
+  target_sources(disk-dabble PRIVATE thirdparty/tiny-process-library/process_win.cpp)
+  #If compiled using MSYS2, use sh to run commands
+  if(MSYS)
+    target_compile_definitions(tiny-process-library PUBLIC MSYS_PROCESS_USE_SH)
+  endif()
+else()
+  target_sources(disk-dabble PRIVATE thirdparty/tiny-process-library/process_unix.cpp)
+endif()
 
 target_compile_features(disk-dabble
     PRIVATE
@@ -52,6 +63,7 @@ target_include_directories(disk-dabble
         "thirdparty/stb"
         "thirdparty/sqlite3/include"
         "thirdparty/Davide-Pizzolato"
+        "thirdparty/tiny-process-library"
         "${PROJECT_BINARY_DIR}"
 )
 
@@ -60,7 +72,6 @@ target_link_libraries(disk-dabble
         glfw
         imgui
         sqlite3
-        tiny-process-library
         fmt
         tinyxml2
         miniz

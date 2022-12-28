@@ -33,18 +33,80 @@ private:
   HANDLE handle;
 };
 
+template <class Char>
+struct CharSet;
+
+template <>
+struct CharSet<char> {
+  static constexpr const char *whitespace = " \t\n\v\"";
+  static constexpr char space = ' ';
+  static constexpr char doublequote = '"';
+  static constexpr char backslash = '\\';
+};
+
+template <>
+struct CharSet<wchar_t> {
+  static constexpr const wchar_t *whitespace = L" \t\n\v\"";
+  static constexpr wchar_t space = L' ';
+  static constexpr wchar_t doublequote = L'"';
+  static constexpr wchar_t backslash = L'\\';
+};
+
+// Based on blog post https://learn.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
+template <class Char>
+static std::basic_string<Char> join_arguments(const std::vector<std::basic_string<Char>> &args) {
+  using charset = CharSet<Char>;
+
+  std::basic_string<Char> ret;
+
+  for(const auto &arg : args) {
+    if(!ret.empty())
+      ret.push_back(charset::space);
+
+    if(!arg.empty() && arg.find_first_of(charset::whitespace) == arg.npos) {
+      ret.append(arg);
+      continue;
+    }
+
+    ret.push_back(charset::doublequote);
+
+    for(auto it = arg.begin();; ++it) {
+      size_t n_backslashes = 0;
+
+      while(it != arg.end() && *it == charset::backslash) {
+        ++it;
+        ++n_backslashes;
+      }
+
+      if(it == arg.end()) {
+        // Escape all backslashes, but let the terminating double quotation mark
+        // we add below be interpreted  as a metacharacter.
+        ret.append(n_backslashes * 2, charset::backslash);
+        break;
+      }
+      else if(*it == charset::doublequote) {
+        // Escape all backslashes and the following double quotation mark.
+        ret.append(n_backslashes * 2 + 1, charset::backslash);
+        ret.push_back(*it);
+      }
+      else {
+        // Backslashes aren't special here.
+        ret.append(n_backslashes, charset::backslash);
+        ret.push_back(*it);
+      }
+    }
+
+    ret.push_back(charset::doublequote);
+  }
+
+  return ret;
+}
+
 // Based on the discussion thread: https://www.reddit.com/r/cpp/comments/3vpjqg/a_new_platform_independent_process_library_for_c11/cxq1wsj
 std::mutex create_process_mutex;
 
 Process::id_type Process::open(const std::vector<string_type> &arguments, const string_type &path, const environment_type *environment) noexcept {
-  string_type command;
-  for(auto &argument : arguments)
-#ifdef UNICODE
-    command += (command.empty() ? L"" : L" ") + argument;
-#else
-    command += (command.empty() ? "" : " ") + argument;
-#endif
-  return open(command, path, environment);
+  return open(join_arguments(arguments), path, environment);
 }
 
 // Based on the example at https://msdn.microsoft.com/en-us/library/windows/desktop/ms682499(v=vs.85).aspx.
@@ -173,8 +235,11 @@ void Process::async_read() noexcept {
       std::unique_ptr<char[]> buffer(new char[config.buffer_size]);
       for(;;) {
         BOOL bSuccess = ReadFile(*stdout_fd, static_cast<CHAR *>(buffer.get()), static_cast<DWORD>(config.buffer_size), &n, nullptr);
-        if(!bSuccess || n == 0)
+        if(!bSuccess || n == 0) {
+          if(config.on_stdout_close)
+            config.on_stdout_close();
           break;
+        }
         read_stdout(buffer.get(), static_cast<size_t>(n));
       }
     });
@@ -185,8 +250,11 @@ void Process::async_read() noexcept {
       std::unique_ptr<char[]> buffer(new char[config.buffer_size]);
       for(;;) {
         BOOL bSuccess = ReadFile(*stderr_fd, static_cast<CHAR *>(buffer.get()), static_cast<DWORD>(config.buffer_size), &n, nullptr);
-        if(!bSuccess || n == 0)
+        if(!bSuccess || n == 0) {
+          if(config.on_stderr_close)
+            config.on_stderr_close();
           break;
+        }
         read_stderr(buffer.get(), static_cast<size_t>(n));
       }
     });
